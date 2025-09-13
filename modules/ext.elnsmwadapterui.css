@@ -1,0 +1,341 @@
+/* ELN SMW Adapter UI Styles */
+
+/* Common Layout - Responsive */
+.elnsmwadapterui-results,
+.elnsmwadapterui-method-selection,
+.elnsmwadapterui-form-container {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Service Status Section */
+.elnsmwadapterui-status-section {
+    margin-bottom: 1.5em;
+    padding: 12px 16px;
+    border: 1px solid #a2a9b1;
+    border-radius: 2px;
+    background-color: #f8f9fa;
+}
+
+.elnsmwadapterui-status-section h3 {
+    margin: 0 0 10px 0;
+    font-size: 1.1em;
+    color: #000;
+}
+
+.elnsmwadapterui-status-connected {
+    color: #14532d;
+    font-weight: 500;
+}
+
+.elnsmwadapterui-status-disconnected {
+    color: #a51d2d;
+    font-weight: 500;
+}
+
+.elnsmwadapterui-status-connected small,
+.elnsmwadapterui-status-disconnected small {
+    color: #72777d;
+    font-weight: normal;
+}
+
+.elnsmwadapterui-section {
+    margin-bottom: 2em;
+    border: 1px solid #a2a9b1;
+    border-radius: 2px;
+    background-color: #f8f9fa;
+}
+
+.elnsmwadapterui-section-title {
+    margin: 0;
+    padding: 12px 16px;
+    background-color: #eaecf0;
+    border-bottom: 1px solid #a2a9b1;
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #000;
+}
+
+/* Form Select Dropdown */
+.elnsmwadapterui-form-select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #a2a9b1;
+    border-radius: 2px;
+    font-size: 1em;
+    background-color: #fff;
+    box-sizing: border-box;
+}
+
+.elnsmwadapterui-form-select:focus {
+    border-color: #0645ad;
+    outline: none;
+    box-shadow: 0 0 0 1px #0645ad;
+}
+
+/* Form Styling */
+.elnsmwadapterui-form-content {
+    padding: 20px;
+}
+
+.elnsmwadapterui-form-description {
+    margin: 0 0 20px 0;
+    color: #72777d;
+    line-height: 1.4;
+}
+
+.elnsmwadapterui-form-field {
+    margin-bottom: 20px;
+}
+
+.elnsmwadapterui-form-label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: bold;
+    color: #000;
+}
+
+.elnsmwadapterui-form-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #a2a9b1;
+    border-radius: 2px;
+    font-size: 1em;
+    box-sizing: border-box;
+}
+
+.elnsmwadapterui-form-input:focus {
+    border-color: #0645ad;
+    outline: none;
+    box-shadow: 0 0 0 1px #0645ad;
+}
+
+.elnsmwadapterui-form-actions {
+    margin-top: 20px;
+}
+
+.elnsmwadapterui-submit-button {
+    padding: 10px 20px;
+}
+
+/* File Upload Styling */
+.elnsmwadapterui-file-upload {
+    position: relative;
+}
+
+.elnsmwadapterui-file-input {
+    position: absolute;
+    left: -9999px;
+    opacity: 0;
+}
+
+.elnsmwadapterui-file-drop-zone {
+    border: 2px dashed #a2a9b1;
+    border-radius: 4px;
+    padding: 40px 20px;
+    text-align: center;
+    background-color: #fff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.elnsmwadapterui-file-drop-zone:hover {
+    border-color: #0645ad;
+    background-color: #f8f9ff;
+}
+
+.elnsmwadapterui-file-icon {
+    font-size: 2.5em;
+    margin-bottom: 10px;
+    color: #a2a9b1;
+}
+
+.elnsmwadapterui-file-text {
+    color: #72777d;
+    font-size: 1em;
+}
+
+.elnsmwadapterui-file-upload:hover .elnsmwadapterui-file-drop-zone .elnsmwadapterui-file-icon {
+    color: #0645ad;
+}
+
+.elnsmwadapterui-file-upload:hover .elnsmwadapterui-file-drop-zone .elnsmwadapterui-file-text {
+    color: #0645ad;
+}
+
+/* Selected file display */
+.elnsmwadapterui-selected-file {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border: 2px solid #00af89;
+    border-radius: 4px;
+    background-color: #d5fdf4;
+    margin-top: 10px;
+}
+
+.elnsmwadapterui-file-name {
+    color: #14532d;
+    font-weight: 500;
+    word-break: break-all;
+    flex: 1;
+}
+
+.elnsmwadapterui-remove-file {
+    background: none;
+    border: none;
+    color: #a51d2d;
+    font-size: 1.2em;
+    cursor: pointer;
+    padding: 0;
+    margin-left: 10px;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.elnsmwadapterui-remove-file:hover {
+    color: #d33;
+    background-color: rgba(165, 29, 45, 0.1);
+    border-radius: 50%;
+}
+
+/* Protocols Section */
+.elnsmwadapterui-protocols-list {
+    padding: 16px;
+}
+
+.elnsmwadapterui-protocol-item {
+    margin-bottom: 8px;
+}
+
+.elnsmwadapterui-protocol-link {
+    display: inline-block;
+    padding: 8px 12px;
+    background-color: #fff;
+    border: 1px solid #00af89;
+    border-radius: 2px;
+    color: #00af89;
+    text-decoration: none;
+    font-weight: bold;
+    transition: all 0.2s ease;
+}
+
+.elnsmwadapterui-protocol-link:hover {
+    background-color: #00af89;
+    color: #fff;
+    text-decoration: none;
+}
+
+.elnsmwadapterui-protocols-summary {
+    margin-top: 16px;
+    padding: 8px 12px;
+    background-color: #d5fdf4;
+    border-left: 4px solid #00af89;
+    color: #14532d;
+    font-weight: bold;
+}
+
+.elnsmwadapterui-no-protocols {
+    padding: 16px;
+    color: #72777d;
+    font-style: italic;
+}
+
+/* Log Messages Section */
+.elnsmwadapterui-log-messages {
+    padding: 16px;
+}
+
+.elnsmwadapterui-log-message {
+    margin-bottom: 8px;
+    padding: 8px 12px;
+    border-radius: 2px;
+    font-family: monospace;
+    font-size: 0.9em;
+}
+
+.elnsmwadapterui-log-error {
+    background-color: #fee7e6;
+    border-left: 4px solid #d33;
+}
+
+.elnsmwadapterui-log-warning {
+    background-color: #fef6e7;
+    border-left: 4px solid #fc3;
+}
+
+.elnsmwadapterui-log-notice {
+    background-color: #d5fdf4;
+    border-left: 4px solid #00af89;
+}
+
+.elnsmwadapterui-log-type {
+    font-weight: bold;
+}
+
+.elnsmwadapterui-log-error .elnsmwadapterui-log-type {
+    color: #d33;
+}
+
+.elnsmwadapterui-log-warning .elnsmwadapterui-log-type {
+    color: #ac6600;
+}
+
+.elnsmwadapterui-log-notice .elnsmwadapterui-log-type {
+    color: #14532d;
+}
+
+.elnsmwadapterui-no-messages {
+    padding: 16px;
+    color: #72777d;
+    font-style: italic;
+}
+
+/* Actions */
+.elnsmwadapterui-actions {
+    margin-top: 2em;
+    text-align: center;
+}
+
+/* Back to selection button */
+.elnsmwadapterui-back-selection {
+    margin-top: 1.5em;
+    padding-top: 1em;
+    border-top: 1px solid #a2a9b1;
+    text-align: center;
+}
+
+/* Plugin Information Section */
+.elnsmwadapterui-plugin-info {
+    margin-bottom: 15px;
+    padding: 8px 12px;
+    background-color: #eaf3ff;
+    border: 1px solid #a2a9b1;
+    border-radius: 4px;
+    border-left: 4px solid #0645ad;
+}
+
+.elnsmwadapterui-plugin-info h3 {
+    margin: 0;
+    font-size: 1em;
+    color: #0645ad;
+}
+
+.elnsmwadapterui-plugin-info p {
+    margin: 5px 0;
+    color: #202122;
+}
+
+/* Form styling */
+.mw-htmlform-field-HTMLSelectField select {
+    min-width: 250px;
+}
+
+.mw-htmlform-field-HTMLFileField input[type="file"] {
+    width: 100%;
+    max-width: 400px;
+}

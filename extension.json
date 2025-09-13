@@ -1,0 +1,64 @@
+{
+    "name": "ELNSMWAdapterUI",
+    "author": ["Marc Hinterthaner"],
+    "url": "https://github.com/your-repo/eln-smw-adapter-ui",
+    "description": "A MediaWiki Extension to provide a user interface for the eln-smw-adapter endpoint",
+    "type": "specialpage",
+    "version": "0.2.0",
+    "license-name": "MIT",
+    "descriptionmsg": "elnsmwadapterui-desc",
+    "requires": {
+        "MediaWiki": ">= 1.35.0"
+    },
+    "AutoloadNamespaces": {
+        "ELNSMWAdapterUI\\": "includes/"
+    },
+    "SpecialPages": {
+        "ELNSMWAdapterUI": {
+            "class": "ELNSMWAdapterUI\\SpecialELNSMWAdapterUI",
+            "services": ["ConfigFactory"]
+        }
+    },
+    "config": {
+        "ELNSMWAdapterUIServiceURL": {
+            "value": "http://localhost:5000",
+            "description": "URL of the ELN SMW Adapter service endpoint"
+        },
+        "ELNSMWAdapterUIWikiURL": {
+            "value": "https://service.tib.eu/sfb1368/wiki",
+            "description": "Base URL of the target MediaWiki instance"
+        },
+        "ELNSMWAdapterUIUploadDir": {
+            "value": "/tmp/elnsmwadapterui",
+            "description": "Directory for uploaded files"
+        }
+    },
+    "GroupPermissions": {
+        "user": {
+            "elnsmwadapterui-use": true
+        },
+        "sysop": {
+            "elnsmwadapterui-use": true
+        }
+    },
+    "AvailableRights": [
+        "elnsmwadapterui-use"
+    ],
+    "ResourceModules": {
+        "ext.elnsmwadapterui.styles": {
+            "styles": [
+                "modules/ext.elnsmwadapterui.css"
+            ]
+        }
+    },
+    "ResourceFileModulePaths": {
+        "localBasePath": "",
+        "remoteExtPath": "ELNSMWAdapterUI"
+    },
+    "manifest_version": 2,
+    "MessagesDirs": {
+        "ELNSMWAdapterUI": [
+            "i18n"
+        ]
+    }
+}

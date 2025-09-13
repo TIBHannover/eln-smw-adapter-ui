@@ -1,0 +1,17 @@
+{
+	"@metadata": {
+		"authors": [
+			"Marc Hinterthaner"
+		]
+	},
+	"elnsmwadapterui": "Generic name for the ELN SMW Adapter extension, not tied to any specific ELN system",
+	"elnsmwadapterui-desc": "{{desc|name=ELN SMW Adapter UI|url=}}",
+	"elnsmwadapterui-form-legend": "Generic legend for importing protocols from any supported ELN system",
+	"elnsmwadapterui-form-url-help": "Generic help text that works for any ELN system with structured experiment data",
+	"elnsmwadapterui-option-url-import": "Generic option for URL-based import from any supported system",
+	"elnsmwadapterui-option-excel-local": "Generic option for file upload, not specific to Excel format",
+	"elnsmwadapterui-form-file-help": "Generic help text for file upload, not tied to specific file formats",
+	"elnsmwadapterui-card-url-description": "Generic description for URL import method from any ELN",
+	"elnsmwadapterui-card-excel-description": "Generic description for file upload method, not format-specific",
+	"elnsmwadapterui-error": "Unused at this time.\n\nUsed as error message."
+}
