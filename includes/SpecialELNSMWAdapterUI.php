@@ -49,9 +49,11 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
         // Check if we should display results or form
         $action = $request->getVal('action', '');
         $method = $request->getVal('method', '');
-        
+
         if ($action === 'results') {
             $this->displayResultsPage($out, $request);
+        } elseif ($action === 'processing') {
+            $this->displayProcessingPage($out, $request);
         } elseif (!empty($method)) {
             // Skip dropdown if method is specified
             $this->displayMethodForm($out, $method);
@@ -354,14 +356,14 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
      */
     private function displayFileUploadForm($out, $method) {
         $request = $this->getRequest();
-        
+
         // Handle form submission first
         if ($request->wasPosted() && $request->getVal('wpmethod') === $method) {
             if (!$this->getUser()->matchEditToken($request->getVal('wpEditToken'))) {
                 $out->addHTML('<div class="errorbox">Invalid form submission. Please try again.</div>');
                 return;
             }
-            
+
             $result = $this->processFileUploadForm(['method' => $method]);
             if ($result !== true && is_string($result)) {
                 $out->addHTML('<div class="errorbox">' . htmlspecialchars($result) . '</div>');
@@ -370,47 +372,50 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
             }
         }
 
+        // Fetch plugin info to get dynamic fields
+        $pluginInfo = $this->getPluginInfo($method);
+
         // Display styled file upload form
         $token = $this->getUser()->getEditToken();
-        
+
         $html = '<div class="elnsmwadapterui-form-container">';
         $html .= '<div class="elnsmwadapterui-section">';
-        $html .= '<h2 class="elnsmwadapterui-section-title">' . 
+        $html .= '<h2 class="elnsmwadapterui-section-title">' .
             $this->msg('elnsmwadapterui-form-upload-legend')->escaped() . '</h2>';
-        
+
         $html .= '<div class="elnsmwadapterui-form-content">';
-        
+
         // Show plugin information
         $html .= '<div class="elnsmwadapterui-plugin-info">';
         $html .= '<h3>Import method: ' . htmlspecialchars($method) . '</h3>';
         $html .= '</div>';
-        
-        $html .= '<p class="elnsmwadapterui-form-description">' . 
+
+        $html .= '<p class="elnsmwadapterui-form-description">' .
             $this->msg('elnsmwadapterui-form-file-help')->escaped() . '</p>';
-        
+
         $html .= Html::openElement('form', [
             'method' => 'post',
             'enctype' => 'multipart/form-data',
             'action' => $this->getPageTitle()->getLocalURL(['method' => $method])
         ]);
-        
+
         $html .= Html::element('input', [
             'type' => 'hidden',
             'name' => 'wpEditToken',
             'value' => $token
         ]);
-        
+
         $html .= Html::element('input', [
             'type' => 'hidden',
             'name' => 'wpmethod',
             'value' => $method
         ]);
-        
+
         // File upload field
         $html .= '<div class="elnsmwadapterui-form-field">';
-        $html .= '<label class="elnsmwadapterui-form-label">' . 
+        $html .= '<label class="elnsmwadapterui-form-label">' .
             $this->msg('elnsmwadapterui-form-file-label')->escaped() . '</label>';
-        
+
         $html .= '<div class="elnsmwadapterui-file-upload">';
         $html .= Html::element('input', [
             'type' => 'file',
@@ -421,7 +426,7 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
         ]);
         $html .= '<div class="elnsmwadapterui-file-drop-zone" onclick="document.querySelector(\'.elnsmwadapterui-file-input\').click();">';
         $html .= '<div class="elnsmwadapterui-file-icon">📄</div>';
-        $html .= '<div class="elnsmwadapterui-file-text">' . 
+        $html .= '<div class="elnsmwadapterui-file-text">' .
             $this->msg('elnsmwadapterui-file-drop-text')->escaped() . '</div>';
         $html .= '</div>';
         $html .= '<div class="elnsmwadapterui-selected-file" style="display: none;">';
@@ -429,9 +434,16 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
         $html .= '<button type="button" class="elnsmwadapterui-remove-file" onclick="clearFileName()">×</button>';
         $html .= '</div>';
         $html .= '</div>';
-        
+
         $html .= '</div>'; // Close form-field
-        
+
+        // Render dynamic fields from plugin info
+        if ($pluginInfo && isset($pluginInfo['fields']) && is_array($pluginInfo['fields'])) {
+            foreach ($pluginInfo['fields'] as $field) {
+                $html .= $this->renderDynamicField($field);
+            }
+        }
+
         $html .= '<div class="elnsmwadapterui-form-actions">';
         $html .= Html::element('input', [
             'type' => 'submit',
@@ -439,22 +451,22 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
             'class' => 'mw-ui-button mw-ui-progressive elnsmwadapterui-submit-button'
         ]);
         $html .= '</div>';
-        
+
         $html .= Html::closeElement('form');
         $html .= '</div>'; // Close form-content
         $html .= '</div>'; // Close section
         $html .= '</div>'; // Close form-container
-        
+
         $out->addHTML($html);
 
-        // Add JavaScript for file name display
+        // Add JavaScript for file name display and drag-and-drop
         $out->addInlineScript("
             function updateFileName(input) {
                 var fileName = input.files[0] ? input.files[0].name : '';
                 var fileNameSpan = document.querySelector('.elnsmwadapterui-file-name');
                 var selectedFileDiv = document.querySelector('.elnsmwadapterui-selected-file');
                 var dropZone = document.querySelector('.elnsmwadapterui-file-drop-zone');
-                
+
                 if (fileName) {
                     fileNameSpan.textContent = fileName;
                     selectedFileDiv.style.display = 'block';
@@ -464,16 +476,58 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
                     dropZone.style.display = 'block';
                 }
             }
-            
+
             function clearFileName() {
                 var fileInput = document.querySelector('.elnsmwadapterui-file-input');
                 var selectedFileDiv = document.querySelector('.elnsmwadapterui-selected-file');
                 var dropZone = document.querySelector('.elnsmwadapterui-file-drop-zone');
-                
+
                 fileInput.value = '';
                 selectedFileDiv.style.display = 'none';
                 dropZone.style.display = 'block';
             }
+
+            // Add drag-and-drop functionality
+            (function() {
+                var dropZone = document.querySelector('.elnsmwadapterui-file-drop-zone');
+                var fileInput = document.querySelector('.elnsmwadapterui-file-input');
+
+                if (dropZone && fileInput) {
+                    // Prevent default drag behaviors
+                    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(function(eventName) {
+                        dropZone.addEventListener(eventName, function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                        }, false);
+                    });
+
+                    // Highlight drop zone when dragging over
+                    ['dragenter', 'dragover'].forEach(function(eventName) {
+                        dropZone.addEventListener(eventName, function() {
+                            dropZone.style.backgroundColor = '#f0f8ff';
+                            dropZone.style.borderColor = '#4a90e2';
+                        }, false);
+                    });
+
+                    ['dragleave', 'drop'].forEach(function(eventName) {
+                        dropZone.addEventListener(eventName, function() {
+                            dropZone.style.backgroundColor = '';
+                            dropZone.style.borderColor = '';
+                        }, false);
+                    });
+
+                    // Handle dropped files
+                    dropZone.addEventListener('drop', function(e) {
+                        var dt = e.dataTransfer;
+                        var files = dt.files;
+
+                        if (files.length > 0) {
+                            fileInput.files = files;
+                            updateFileName(fileInput);
+                        }
+                    }, false);
+                }
+            })();
         ");
 
         // Display any messages
@@ -497,6 +551,59 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
         $html .= '</div>';
         $out->addHTML($html);
     }
+
+    /**
+     * Render a dynamic form field based on field metadata
+     * @param array $field Field metadata from plugin info
+     * @return string HTML for the field
+     */
+    private function renderDynamicField($field) {
+        $html = '<div class="elnsmwadapterui-form-field">';
+        $html .= '<label class="elnsmwadapterui-form-label">';
+        $html .= htmlspecialchars($field['label']);
+        if (isset($field['required']) && $field['required']) {
+            $html .= ' <span style="color: red;">*</span>';
+        }
+        $html .= '</label>';
+
+        $fieldName = 'field_' . htmlspecialchars($field['name']);
+        $isRequired = isset($field['required']) && $field['required'];
+
+        switch ($field['type']) {
+            case 'select':
+                $html .= Html::openElement('select', [
+                    'name' => $fieldName,
+                    'class' => 'elnsmwadapterui-form-select',
+                    'required' => $isRequired ? 'required' : null
+                ]);
+
+                // Add empty option that's selected by default to force user selection
+                $html .= Html::element('option', ['value' => '', 'selected' => 'selected', 'disabled' => 'disabled'], '-- Please select --');
+
+                if (isset($field['options']) && is_array($field['options'])) {
+                    foreach ($field['options'] as $option) {
+                        $html .= Html::element('option', [
+                            'value' => htmlspecialchars($option)
+                        ], htmlspecialchars($option));
+                    }
+                }
+                $html .= Html::closeElement('select');
+                break;
+
+            case 'text':
+            default:
+                $html .= Html::element('input', [
+                    'type' => 'text',
+                    'name' => $fieldName,
+                    'class' => 'elnsmwadapterui-form-input',
+                    'required' => $isRequired ? 'required' : null
+                ]);
+                break;
+        }
+
+        $html .= '</div>';
+        return $html;
+    }
     
     /**
      * Process URL form submission callback
@@ -505,20 +612,29 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
      */
     public function processForm($data) {
         $elnUrl = isset($data['eln-url']) ? $data['eln-url'] : '';
-        
+
         if (!$this->isValidUrl($elnUrl)) {
             return 'Please provide a valid URL.';
         }
 
         $result = $this->adaptProtocols($elnUrl);
         if ($result) {
-            // Instead of showing results here, redirect to show results page
+            // Check if this is an async job
+            if (isset($result->is_async_job) && $result->is_async_job === true) {
+                // Redirect to processing page with job_id
+                $this->getOutput()->redirect(
+                    $this->getPageTitle()->getLocalURL(['action' => 'processing', 'job_id' => $result->job_id])
+                );
+                return true;
+            }
+
+            // Synchronous result - redirect to show results page
             $this->getOutput()->redirect(
                 $this->getPageTitle()->getLocalURL(['action' => 'results', 'data' => base64_encode(json_encode($result))])
             );
             return true;
         }
-        
+
         return 'Failed to process the request.';
     }
 
@@ -529,11 +645,11 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
      */
     public function processFileUploadForm($data) {
         $method = isset($data['method']) ? $data['method'] : '';
-        
+
         // Handle file upload
         $request = $this->getRequest();
         $uploadedFile = $request->getUpload('upload-file');
-        
+
         if (!$uploadedFile || !$uploadedFile->exists()) {
             return 'Please select a file to upload.';
         }
@@ -548,18 +664,19 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
             return 'Upload directory is not configured.';
         }
 
-        // Generate unique filename using GUID preserving original extension
-        $fileExtension = pathinfo($fileName, PATHINFO_EXTENSION);
-        $guid = sprintf(
-            '%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
-            mt_rand(0, 0xffff), mt_rand(0, 0xffff),
-            mt_rand(0, 0xffff),
-            mt_rand(0, 0x0fff) | 0x4000,
-            mt_rand(0, 0x3fff) | 0x8000,
-            mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
-        );
-        $uploadPath = $uploadDir . '/' . $guid . ($fileExtension ? '.' . $fileExtension : '');
-        
+        // Use original filename and delete existing file if it exists
+        $uploadPath = $uploadDir . '/' . $fileName;
+
+        // Delete existing file if it exists
+        if (file_exists($uploadPath)) {
+            if (!unlink($uploadPath)) {
+                return 'Failed to remove existing file with the same name.';
+            }
+            $this->logger->info('Existing file deleted before upload', [
+                'file_path' => $uploadPath
+            ]);
+        }
+
         // Move uploaded file from temp location
         $tempPath = $uploadedFile->getTempName();
         if (!$tempPath || !move_uploaded_file($tempPath, $uploadPath)) {
@@ -573,15 +690,34 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
             'size' => $fileSize
         ]);
 
+        // Collect dynamic field values
+        $dynamicFields = [];
+        foreach ($request->getValues() as $key => $value) {
+            if (strpos($key, 'field_') === 0) {
+                $fieldName = substr($key, 6); // Remove 'field_' prefix
+                $dynamicFields[$fieldName] = $value;
+            }
+        }
+
         // Process with adapter service using file path as ID
-        $result = $this->adaptProtocols($uploadPath, $method);
+        $result = $this->adaptProtocols($uploadPath, $method, $dynamicFields);
         if ($result) {
+            // Check if this is an async job
+            if (isset($result->is_async_job) && $result->is_async_job === true) {
+                // Redirect to processing page with job_id
+                $this->getOutput()->redirect(
+                    $this->getPageTitle()->getLocalURL(['action' => 'processing', 'job_id' => $result->job_id])
+                );
+                return true;
+            }
+
+            // Synchronous result - redirect to show results page
             $this->getOutput()->redirect(
                 $this->getPageTitle()->getLocalURL(['action' => 'results', 'data' => base64_encode(json_encode($result))])
             );
             return true;
         }
-        
+
         return 'Failed to process the uploaded file.';
     }
 
@@ -607,23 +743,162 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
      * @param WebRequest $request
      */
     private function displayResultsPage($out, $request) {
+        // Check if we have job_id (new method) or data (old method for backwards compat)
+        $jobId = $request->getVal('job_id', '');
         $data = $request->getVal('data', '');
-        if (empty($data)) {
+
+        $result = null;
+
+        if (!empty($jobId)) {
+            // Fetch result from backend via job_id
+            $serviceUrl = $this->config->get('ELNSMWAdapterUIServiceURL');
+            $jobUrl = rtrim($serviceUrl, '/') . '/job/' . urlencode($jobId);
+
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $jobUrl);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($httpCode === 200 && $response) {
+                $jobData = json_decode($response);
+                if ($jobData && isset($jobData->result)) {
+                    $result = $jobData->result;
+                }
+            }
+        } elseif (!empty($data)) {
+            // Old method: decode from URL parameter
+            $result = json_decode(base64_decode($data));
+        }
+
+        if (!$result) {
             $out->addHTML('<div class="errorbox">No results data found.</div>');
             return;
         }
-        
-        $result = json_decode(base64_decode($data));
-        if (!$result) {
-            $out->addHTML('<div class="errorbox">Invalid results data.</div>');
-            return;
-        }
-        
+
         $this->displayResults($out, $result);
     }
 
     /**
-     * Display results after processing  
+     * Display processing page with JavaScript polling
+     * @param OutputPage $out
+     * @param WebRequest $request
+     */
+    private function displayProcessingPage($out, $request) {
+        $jobId = $request->getVal('job_id', '');
+        if (empty($jobId)) {
+            $out->addHTML('<div class="errorbox">No job ID provided.</div>');
+            return;
+        }
+
+        $out->setPageTitle('Processing Import');
+
+        // Use public job status URL that browser can access (via nginx proxy)
+        // Construct from $wgServer (https://service.tib.eu) + /sfb1368/eln-smw-adapter/job/
+        $server = $this->getConfig()->get('Server');
+        $jobStatusUrl = rtrim($server, '/') . '/sfb1368/eln-smw-adapter/job/' . urlencode($jobId);
+        $resultsUrl = $this->getPageTitle()->getLocalURL(['action' => 'results', 'job_id' => '__JOBID__']);
+
+        $html = '<div class="elnsmwadapterui-processing">';
+        $html .= '<div class="elnsmwadapterui-section">';
+        $html .= '<h2 class="elnsmwadapterui-section-title">Processing Your Import</h2>';
+        $html .= '<div class="elnsmwadapterui-processing-content">';
+        $html .= '<div class="elnsmwadapterui-spinner"></div>';
+        $html .= '<p id="processing-status">Please wait while your import is being processed...</p>';
+        $html .= '<p id="processing-error" style="display:none; color: red;"></p>';
+        $html .= '</div>';
+        $html .= '</div>';
+        $html .= '</div>';
+
+        $out->addHTML($html);
+
+        // Add inline JavaScript for polling
+        $out->addInlineScript("
+(function() {
+    var jobStatusUrl = " . json_encode($jobStatusUrl) . ";
+    var resultsBaseUrl = " . json_encode($resultsUrl) . ";
+    var pollInterval = 1000; // Poll every second
+    var maxAttempts = 180; // Max 180 seconds
+    var attempts = 0;
+
+    function pollJobStatus() {
+        attempts++;
+
+        if (attempts > maxAttempts) {
+            document.getElementById('processing-status').style.display = 'none';
+            document.getElementById('processing-error').textContent = 'Request timed out after 3 minutes. The import may still be processing. Please check back later.';
+            document.getElementById('processing-error').style.display = 'block';
+            return;
+        }
+
+        fetch(jobStatusUrl)
+            .then(function(response) {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(function(data) {
+                if (data.status === 'completed') {
+                    // Success - redirect to results page with job_id
+                    window.location.href = resultsBaseUrl.replace('__JOBID__', data.id);
+                } else if (data.status === 'failed') {
+                    // Failed - show error
+                    document.getElementById('processing-status').style.display = 'none';
+                    document.getElementById('processing-error').textContent = 'Import failed: ' + (data.error || 'Unknown error');
+                    document.getElementById('processing-error').style.display = 'block';
+                } else {
+                    // Still processing - poll again
+                    setTimeout(pollJobStatus, pollInterval);
+                }
+            })
+            .catch(function(error) {
+                // Network error - retry
+                console.error('Polling error:', error);
+                setTimeout(pollJobStatus, pollInterval);
+            });
+    }
+
+    // Start polling
+    pollJobStatus();
+})();
+        ");
+
+        // Add CSS for spinner
+        $out->addInlineStyle("
+.elnsmwadapterui-processing {
+    text-align: center;
+    padding: 40px 20px;
+}
+.elnsmwadapterui-processing-content {
+    padding: 20px;
+}
+.elnsmwadapterui-spinner {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #3498db;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 20px;
+}
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+#processing-status {
+    font-size: 16px;
+    color: #555;
+    margin: 10px 0;
+}
+        ");
+    }
+
+    /**
+     * Display results after processing
      * @param OutputPage $out
      * @param object|null $result
      */
@@ -735,13 +1010,14 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
      * Process protocols from ELN URL or file path
      * @param string $elnUrlOrPath
      * @param string $method
+     * @param array $dynamicFields
      * @return object|null
      */
-    private function adaptProtocols($elnUrlOrPath, $method = 'url') {
+    private function adaptProtocols($elnUrlOrPath, $method = 'url', $dynamicFields = []) {
         if ($method === 'url') {
             // Handle URL-based processing (original logic)
             $parsedUrl = parse_url($elnUrlOrPath);
-            
+
             if (!isset($parsedUrl['host'])) {
                 $this->addMessage('error', 'elnsmwadapterui-error-invalid-url');
                 return null;
@@ -749,14 +1025,14 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 
             switch ($parsedUrl['host']) {
                 case 'elab.tu-clausthal.de':
-                    return $this->processELabFTWUrl($parsedUrl);
+                    return $this->processELabFTWUrl($parsedUrl, $dynamicFields);
                 default:
                     $this->addMessage('error', 'elnsmwadapterui-error-unsupported-eln', [$parsedUrl['host']]);
                     return null;
             }
         } else {
             // Handle file-based processing
-            return $this->processUploadedFile($elnUrlOrPath, $method);
+            return $this->processUploadedFile($elnUrlOrPath, $method, $dynamicFields);
         }
     }
 
@@ -764,9 +1040,10 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
      * Process uploaded file
      * @param string $filePath
      * @param string $method
+     * @param array $dynamicFields
      * @return object|null
      */
-    private function processUploadedFile($filePath, $method) {
+    private function processUploadedFile($filePath, $method, $dynamicFields = []) {
         if (!file_exists($filePath)) {
             $this->addMessage('error', 'elnsmwadapterui-error-file-not-found');
             return null;
@@ -775,43 +1052,57 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
         // Use method name directly as plugin name
         // For file uploads, pass just the filename, not the full path
         $fileName = basename($filePath);
-        return $this->callAdapterService($method, $fileName);
+        return $this->callAdapterService($method, $fileName, $dynamicFields);
     }
 
     /**
      * Process eLabFTW URL and extract experiment ID
      * @param array $parsedUrl
+     * @param array $dynamicFields
      * @return object|null
      */
-    private function processELabFTWUrl($parsedUrl) {
+    private function processELabFTWUrl($parsedUrl, $dynamicFields = []) {
         if (!isset($parsedUrl['query'])) {
             $this->addMessage('error', 'elnsmwadapterui-error-missing-query');
             return null;
         }
 
         parse_str($parsedUrl['query'], $query);
-        
+
         if (!isset($query['id'])) {
             $this->addMessage('error', 'elnsmwadapterui-error-missing-id');
             return null;
         }
 
-        return $this->callAdapterService('eLabFTW', $query['id']);
+        return $this->callAdapterService('eLabFTW', $query['id'], $dynamicFields);
     }
 
     /**
      * Call the adapter service with proper error handling
      * @param string $eln
      * @param string $id
+     * @param array $additionalData Additional data including user, dynamic fields, etc.
      * @return object|null
      */
-    private function callAdapterService($eln, $id) {
+    private function callAdapterService($eln, $id, $additionalData = []) {
         $serviceUrl = $this->config->get('ELNSMWAdapterUIServiceURL');
-        $url = rtrim($serviceUrl, '/') . '/adapt';
-        
-        $data = [
+        $url = rtrim($serviceUrl, '/') . '/adapt-async';
+
+        // Get current user - prefer real name, fallback to username
+        $currentUser = $this->getUser();
+        $userName = $currentUser->getRealName();
+        if (empty($userName)) {
+            $userName = $currentUser->getName();
+        }
+
+        // Build request payload
+        $payload = [
             'eln' => $eln,
-            'id' => $id
+            'id' => $id,
+            'data' => array_merge(
+                ['user' => $userName],
+                $additionalData
+            )
         ];
 
         $this->logger->info('Calling adapter service', [
@@ -824,13 +1115,13 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
         curl_setopt_array($ch, [
             CURLOPT_URL => $url,
             CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => json_encode($data),
+            CURLOPT_POSTFIELDS => json_encode($payload),
             CURLOPT_HTTPHEADER => [
                 'Content-Type: application/json',
                 'User-Agent: MediaWiki-ELNSMWAdapterUI/0.2.0'
             ],
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => 30,
+            CURLOPT_TIMEOUT => 120,
             CURLOPT_CONNECTTIMEOUT => 10,
             CURLOPT_FOLLOWLOCATION => false,
             CURLOPT_SSL_VERIFYPEER => true,
@@ -859,7 +1150,7 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
             return null;
         }
 
-        $result = json_decode($response);
+        $jobResponse = json_decode($response);
         if (json_last_error() !== JSON_ERROR_NONE) {
             $this->logger->error('Invalid JSON response from adapter service', [
                 'response' => $response,
@@ -869,7 +1160,23 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
             return null;
         }
 
-        return $result;
+        $this->logger->info('Got job response', ['job_response' => $response]);
+
+        // Get job ID from response
+        if (!isset($jobResponse->job_id)) {
+            $this->logger->error('No job_id in response', ['response' => $response]);
+            $this->addMessage('error', 'elnsmwadapterui-error-invalid-response');
+            return null;
+        }
+
+        $jobId = $jobResponse->job_id;
+        $this->logger->info('Returning job_id to client', ['job_id' => $jobId]);
+
+        // Return job_id wrapped in object to distinguish from regular result
+        return (object)[
+            'job_id' => $jobId,
+            'is_async_job' => true
+        ];
     }
 
     /**
@@ -879,7 +1186,7 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
     private function checkServiceStatus() {
         $serviceUrl = $this->config->get('ELNSMWAdapterUIServiceURL');
         $statusUrl = rtrim($serviceUrl, '/') . '/status';
-        
+
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $statusUrl);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -887,15 +1194,48 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
         curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-        
+
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
-        
+
         if ($httpCode === 200 && $response) {
             return json_decode($response, true);
         }
-        
+
+        return null;
+    }
+
+    /**
+     * Get plugin info including dynamic form fields
+     * @param string $pluginName
+     * @return array|null Plugin info or null if unreachable
+     */
+    private function getPluginInfo($pluginName) {
+        $serviceUrl = $this->config->get('ELNSMWAdapterUIServiceURL');
+        $pluginInfoUrl = rtrim($serviceUrl, '/') . '/plugin-info/' . urlencode($pluginName);
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $pluginInfoUrl);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode === 200 && $response) {
+            return json_decode($response, true);
+        }
+
+        $this->logger->warning('Failed to get plugin info', [
+            'plugin' => $pluginName,
+            'http_code' => $httpCode
+        ]);
+
         return null;
     }
 
