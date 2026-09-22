@@ -22,3 +22,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Remove the deprecated, unreferenced `ELNSMWAdapterUISpecialPage.php`
   compatibility shim.
+- Remove the unused `validateCSRFToken()` and `handleFormSubmission()`
+  methods from `SpecialELNSMWAdapterUI`.

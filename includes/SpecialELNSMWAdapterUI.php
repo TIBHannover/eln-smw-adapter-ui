@@ -63,45 +63,6 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 	}
 
 	/**
-	 * Validate CSRF token for form submissions
-	 * @param WebRequest $request
-	 * @return bool
-	 */
-	private function validateCSRFToken( WebRequest $request ) {
-		$token = $request->getVal( 'wpEditToken' );
-		return $this->getUser()->matchEditToken( $token );
-	}
-
-	/**
-	 * Handle form submission and process the ELN URL
-	 * @param WebRequest $request
-	 * @param OutputPage $out
-	 */
-	private function handleFormSubmission( WebRequest $request, $out ) {
-		// Try different field names in case HTMLForm uses a different one
-		$elnUrl = $request->getVal( 'wpeln-url', '' );
-		if ( empty( $elnUrl ) ) {
-			$elnUrl = $request->getVal( 'eln-url', '' );
-		}
-
-		// Debug logging
-		$this->logger->debug( 'Form submission received', [
-			'wpeln-url' => $request->getVal( 'wpeln-url', 'not set' ),
-			'eln-url' => $request->getVal( 'eln-url', 'not set' ),
-			'all_values' => $request->getValues()
-		] );
-
-		if ( !$this->isValidUrl( $elnUrl ) ) {
-			$this->addMessage( 'error', 'elnsmwadapterui-error-invalid-url' );
-			$this->displayForm( $out, $elnUrl );
-			return;
-		}
-
-		$result = $this->adaptProtocols( $elnUrl );
-		$this->displayResults( $out, $result );
-	}
-
-	/**
 	 * Validate the provided URL
 	 * @param string $url
 	 * @return bool
