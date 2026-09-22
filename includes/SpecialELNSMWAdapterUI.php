@@ -738,20 +738,9 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 			$serviceUrl = $this->config->get( 'ELNSMWAdapterUIServiceURL' );
 			$jobUrl = rtrim( $serviceUrl, '/' ) . '/job/' . urlencode( $jobId );
 
-			$ch = curl_init();
-			curl_setopt( $ch, CURLOPT_URL, $jobUrl );
-			curl_setopt( $ch, CURLOPT_RETURNTRANSFER, true );
-			curl_setopt( $ch, CURLOPT_TIMEOUT, 10 );
-
-			$response = curl_exec( $ch );
-			$httpCode = curl_getinfo( $ch, CURLINFO_HTTP_CODE );
-			curl_close( $ch );
-
-			if ( $httpCode === 200 && $response ) {
-				$jobData = json_decode( $response );
-				if ( $jobData && isset( $jobData->result ) ) {
-					$result = $jobData->result;
-				}
+			$jobData = $this->httpGetJson( $jobUrl, false, 10 );
+			if ( $jobData && isset( $jobData->result ) ) {
+				$result = $jobData->result;
 			}
 		} elseif ( !empty( $data ) ) {
 			// Old method: decode from URL parameter
@@ -1171,6 +1160,47 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 	}
 
 	/**
+	 * Perform a GET request against the adapter service and decode the JSON response
+	 * @param string $url
+	 * @param bool $associative Decode JSON objects as associative arrays instead of stdClass
+	 * @param int $timeout
+	 * @param int $connectTimeout
+	 * @return array|stdClass|null Decoded response, or null on failure
+	 */
+	private function httpGetJson( $url, $associative = true, $timeout = 5, $connectTimeout = 3 ) {
+		$ch = curl_init();
+		curl_setopt( $ch, CURLOPT_URL, $url );
+		curl_setopt( $ch, CURLOPT_RETURNTRANSFER, true );
+		curl_setopt( $ch, CURLOPT_TIMEOUT, $timeout );
+		curl_setopt( $ch, CURLOPT_CONNECTTIMEOUT, $connectTimeout );
+		curl_setopt( $ch, CURLOPT_SSL_VERIFYPEER, true );
+		curl_setopt( $ch, CURLOPT_HTTPHEADER, [ 'Content-Type: application/json' ] );
+
+		$response = curl_exec( $ch );
+		$httpCode = curl_getinfo( $ch, CURLINFO_HTTP_CODE );
+		$curlError = curl_error( $ch );
+		curl_close( $ch );
+
+		if ( $response === false || $curlError !== '' ) {
+			$this->logger->error( 'cURL error when calling adapter service', [
+				'error' => $curlError,
+				'url' => $url
+			] );
+			return null;
+		}
+
+		if ( $httpCode !== 200 ) {
+			$this->logger->warning( 'HTTP error from adapter service', [
+				'http_code' => $httpCode,
+				'url' => $url
+			] );
+			return null;
+		}
+
+		return json_decode( $response, $associative );
+	}
+
+	/**
 	 * Check the status of the adapter service
 	 * @return array|null Status information or null if unreachable
 	 */
@@ -1178,23 +1208,7 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 		$serviceUrl = $this->config->get( 'ELNSMWAdapterUIServiceURL' );
 		$statusUrl = rtrim( $serviceUrl, '/' ) . '/status';
 
-		$ch = curl_init();
-		curl_setopt( $ch, CURLOPT_URL, $statusUrl );
-		curl_setopt( $ch, CURLOPT_RETURNTRANSFER, true );
-		curl_setopt( $ch, CURLOPT_TIMEOUT, 5 );
-		curl_setopt( $ch, CURLOPT_CONNECTTIMEOUT, 3 );
-		curl_setopt( $ch, CURLOPT_SSL_VERIFYPEER, true );
-		curl_setopt( $ch, CURLOPT_HTTPHEADER, [ 'Content-Type: application/json' ] );
-
-		$response = curl_exec( $ch );
-		$httpCode = curl_getinfo( $ch, CURLINFO_HTTP_CODE );
-		curl_close( $ch );
-
-		if ( $httpCode === 200 && $response ) {
-			return json_decode( $response, true );
-		}
-
-		return null;
+		return $this->httpGetJson( $statusUrl );
 	}
 
 	/**
@@ -1206,28 +1220,7 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 		$serviceUrl = $this->config->get( 'ELNSMWAdapterUIServiceURL' );
 		$pluginInfoUrl = rtrim( $serviceUrl, '/' ) . '/plugin-info/' . urlencode( $pluginName );
 
-		$ch = curl_init();
-		curl_setopt( $ch, CURLOPT_URL, $pluginInfoUrl );
-		curl_setopt( $ch, CURLOPT_RETURNTRANSFER, true );
-		curl_setopt( $ch, CURLOPT_TIMEOUT, 5 );
-		curl_setopt( $ch, CURLOPT_CONNECTTIMEOUT, 3 );
-		curl_setopt( $ch, CURLOPT_SSL_VERIFYPEER, true );
-		curl_setopt( $ch, CURLOPT_HTTPHEADER, [ 'Content-Type: application/json' ] );
-
-		$response = curl_exec( $ch );
-		$httpCode = curl_getinfo( $ch, CURLINFO_HTTP_CODE );
-		curl_close( $ch );
-
-		if ( $httpCode === 200 && $response ) {
-			return json_decode( $response, true );
-		}
-
-		$this->logger->warning( 'Failed to get plugin info', [
-			'plugin' => $pluginName,
-			'http_code' => $httpCode
-		] );
-
-		return null;
+		return $this->httpGetJson( $pluginInfoUrl );
 	}
 
 	/**

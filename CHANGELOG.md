@@ -22,6 +22,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Avoid calling the adapter service's `/status` endpoint twice per
   request in `displaySelectionForm()`.
+- Log cURL transport errors (not just non-200 HTTP responses) when
+  fetching service status, plugin info, or job results from the
+  adapter service.
+
+### Changed
+
+- Extract the duplicated cURL GET/JSON-decode logic in
+  `checkServiceStatus()`, `getPluginInfo()`, and `displayResultsPage()`
+  into a shared `httpGetJson()` helper.
 
 ### Removed
 
