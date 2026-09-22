@@ -31,6 +31,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Extract the duplicated cURL GET/JSON-decode logic in
   `checkServiceStatus()`, `getPluginInfo()`, and `displayResultsPage()`
   into a shared `httpGetJson()` helper.
+- Inject `ConfigFactory` into `SpecialELNSMWAdapterUI`'s constructor
+  instead of resolving config lazily via `getConfig()` in `execute()`.
+  Makes the `services` declaration in `extension.json` actually take
+  effect and allows constructing the special page without a full
+  request context.
 
 ### Removed
 

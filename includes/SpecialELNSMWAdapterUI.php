@@ -4,6 +4,7 @@ namespace ELNSMWAdapterUI;
 
 use Html;
 use MediaWiki\Config\Config;
+use MediaWiki\Config\ConfigFactory;
 use MediaWiki\Logger\LoggerFactory;
 use Psr\Log\LoggerInterface;
 use SpecialPage;
@@ -26,8 +27,12 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 	/** @var array */
 	private $messages = [];
 
-	public function __construct() {
+	/**
+	 * @param ConfigFactory $configFactory
+	 */
+	public function __construct( ConfigFactory $configFactory ) {
 		parent::__construct( 'ELNSMWAdapterUI', 'elnsmwadapterui-use' );
+		$this->config = $configFactory->makeConfig( 'main' );
 		$this->logger = LoggerFactory::getInstance( 'ELNSMWAdapterUI' );
 	}
 
@@ -36,7 +41,6 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 	 * @param string|null $par
 	 */
 	public function execute( $par ) {
-		$this->config = $this->getConfig();
 		$this->setHeaders();
 		$this->checkPermissions();
 
@@ -771,7 +775,7 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 
 		// Use public job status URL that browser can access (via nginx proxy)
 		// Construct from $wgServer (https://service.tib.eu) + /sfb1368/eln-smw-adapter/job/
-		$server = $this->getConfig()->get( 'Server' );
+		$server = $this->config->get( 'Server' );
 		$jobStatusUrl = rtrim( $server, '/' ) . '/sfb1368/eln-smw-adapter/job/' . urlencode( $jobId );
 		$resultsUrl = $this->getPageTitle()->getLocalURL( [ 'action' => 'results', 'job_id' => '__JOBID__' ] );
 
