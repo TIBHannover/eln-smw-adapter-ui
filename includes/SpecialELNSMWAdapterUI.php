@@ -154,7 +154,6 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 			'required' => 'required'
 		] );
 		// Get plugins dynamically from service status
-		$status = $this->checkServiceStatus();
 		$hasUrlPlugins = false;
 		$uploadPlugins = [];
 

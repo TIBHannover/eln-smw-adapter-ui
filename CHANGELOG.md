@@ -18,6 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Raise minimum required MediaWiki version from 1.35.0 to 1.39.0.
 - Fix all MediaWiki-CodeSniffer violations to make `composer test` pass.
 
+### Fixed
+
+- Avoid calling the adapter service's `/status` endpoint twice per
+  request in `displaySelectionForm()`.
+
 ### Removed
 
 - Remove the deprecated, unreferenced `ELNSMWAdapterUISpecialPage.php`
