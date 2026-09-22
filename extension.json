@@ -4,11 +4,11 @@
     "url": "https://github.com/your-repo/eln-smw-adapter-ui",
     "description": "A MediaWiki Extension to provide a user interface for the eln-smw-adapter endpoint",
     "type": "specialpage",
-    "version": "0.2.0",
+    "version": "1.0.0",
     "license-name": "MIT",
     "descriptionmsg": "elnsmwadapterui-desc",
     "requires": {
-        "MediaWiki": ">= 1.35.0"
+        "MediaWiki": ">= 1.39.0"
     },
     "AutoloadNamespaces": {
         "ELNSMWAdapterUI\\": "includes/"
