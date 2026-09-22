@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - '**/*.adoc'
+  pull_request:
+    branches: [ main ]
+    paths-ignore:
+      - '**/*.adoc'
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.experimental }}
+
+    strategy:
+      matrix:
+        include:
+          - mediawiki_version: '1.39'
+            php_version: '8.1'
+            database_type: mysql
+            database_image: "mysql:8"
+            coverage: false
+            experimental: false
+          - mediawiki_version: '1.43'
+            php_version: '8.3'
+            database_type: mysql
+            database_image: "mysql:8"
+            coverage: true
+            experimental: false
+
+    env:
+      MW_VERSION: ${{ matrix.mediawiki_version }}
+      PHP_VERSION: ${{ matrix.php_version }}
+      DB_TYPE: ${{ matrix.database_type }}
+      DB_IMAGE: ${{ matrix.database_image }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Run CI
+        run: make ci
+        if: matrix.coverage == false
+
+      - name: Run CI with coverage
+        run: mkdir -p build/coverage && make ci-coverage
+        if: matrix.coverage == true
+
+      - name: Upload coverage
+        if: matrix.coverage == true
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: TIBHannover/eln-smw-adapter-ui
+          files: build/coverage/php/coverage.xml
+          disable_search: true

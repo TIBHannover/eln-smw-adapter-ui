@@ -1,0 +1,9 @@
+<phpunit colors="true">
+    <testsuites>
+    </testsuites>
+    <coverage>
+        <include>
+            <directory suffix=".php">includes</directory>
+        </include>
+    </coverage>
+</phpunit>

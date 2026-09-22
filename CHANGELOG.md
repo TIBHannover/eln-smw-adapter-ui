@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Set up docker-compose-ci (DCI) based GitHub Actions CI, covering
+  MediaWiki 1.39/PHP 8.1 and 1.43/PHP 8.3 (with Codecov coverage
+  reporting).
+
 ### Changed
 
 - Raise minimum required MediaWiki version from 1.35.0 to 1.39.0.
