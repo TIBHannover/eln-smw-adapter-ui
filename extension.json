@@ -60,5 +60,8 @@
         "ELNSMWAdapterUI": [
             "i18n"
         ]
+    },
+    "ExtensionMessagesFiles": {
+        "ELNSMWAdapterUIAlias": "ELNSMWAdapterUI.alias.php"
     }
 }

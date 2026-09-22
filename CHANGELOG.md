@@ -25,6 +25,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Log cURL transport errors (not just non-200 HTTP responses) when
   fetching service status, plugin info, or job results from the
   adapter service.
+- Register special page aliases for `ELNSMWAdapterUI` via
+  `ELNSMWAdapterUI.alias.php`. Without them, `SpecialPageFactory`
+  cannot resolve a local name for the page, which breaks any code path
+  relying on `getLocalNameFor()` (including `getPageTitle()->getLocalURL()`
+  calls the special page itself makes when rendering form actions).
 
 ### Changed
 
