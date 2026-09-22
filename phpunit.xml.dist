@@ -1,5 +1,8 @@
 <phpunit colors="true">
     <testsuites>
+        <testsuite name="ELNSMWAdapterUI">
+            <directory>tests/phpunit</directory>
+        </testsuite>
     </testsuites>
     <coverage>
         <include>
