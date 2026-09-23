@@ -4,6 +4,7 @@ namespace ELNSMWAdapterUI\Tests;
 
 use ELNSMWAdapterUI\SpecialELNSMWAdapterUI;
 use FauxRequest;
+use MockHttpTrait;
 use PermissionsError;
 use RequestContext;
 use SpecialPageTestBase;
@@ -13,6 +14,8 @@ use SpecialPageTestBase;
  * @group Database
  */
 class SpecialELNSMWAdapterUITest extends SpecialPageTestBase {
+
+	use MockHttpTrait;
 
 	protected function newSpecialPage() {
 		return $this->getServiceContainer()->getSpecialPageFactory()->getPage( 'ELNSMWAdapterUI' );
@@ -41,6 +44,12 @@ class SpecialELNSMWAdapterUITest extends SpecialPageTestBase {
 		return $page;
 	}
 
+	public function testGetGroupNameReturnsOther() {
+		$page = $this->newSpecialPage();
+
+		$this->assertSame( 'other', $page->getGroupName() );
+	}
+
 	public function testExecuteRequiresElnSmwAdapterUiUsePermission() {
 		$this->setGroupPermissions( 'user', 'elnsmwadapterui-use', false );
 		$this->expectException( PermissionsError::class );
@@ -53,8 +62,9 @@ class SpecialELNSMWAdapterUITest extends SpecialPageTestBase {
 		);
 	}
 
-	public function testDefaultViewShowsSelectionForm() {
+	public function testDefaultViewShowsSelectionFormWhenServiceUnreachable() {
 		$this->setUserLang( 'qqx' );
+		$this->installMockHttp( $this->makeFakeHttpRequest( '', 0 ) );
 
 		[ $html ] = $this->executeSpecialPage(
 			'',
@@ -64,6 +74,33 @@ class SpecialELNSMWAdapterUITest extends SpecialPageTestBase {
 		);
 
 		$this->assertStringContainsString( '(elnsmwadapterui-form-select-legend)', $html );
+		$this->assertStringContainsString( 'Service unavailable or not responding', $html );
+	}
+
+	public function testDefaultViewShowsServiceStatusWhenReachable() {
+		$this->setUserLang( 'qqx' );
+		$status = [
+			'version' => '1.2.3',
+			'smw_connection' => 'ok',
+			'enabled_plugins' => [ 'eLabFTW' ],
+			'plugins' => [
+				'eLabFTW' => [ 'type' => 'url' ],
+				'excel-upload' => [ 'type' => 'upload' ],
+			],
+		];
+		$this->installMockHttp( $this->makeFakeHttpRequest( json_encode( $status ), 200 ) );
+
+		[ $html ] = $this->executeSpecialPage(
+			'',
+			new FauxRequest( [] ),
+			null,
+			$this->newAuthorizedPerformer()
+		);
+
+		$this->assertStringContainsString( 'Service is running (v1.2.3)', $html );
+		$this->assertStringContainsString( 'SMW Connection: ok', $html );
+		$this->assertStringContainsString( 'value="url" selected', $html );
+		$this->assertStringContainsString( 'Upload file (excel-upload)', $html );
 	}
 
 	public function testMethodUrlShowsUrlImportForm() {
@@ -103,6 +140,8 @@ class SpecialELNSMWAdapterUITest extends SpecialPageTestBase {
 	}
 
 	public function testUnknownMethodShowsUnknownMethodError() {
+		$this->installMockHttp( $this->makeFakeHttpRequest( '', 0 ) );
+
 		[ $html ] = $this->executeSpecialPage(
 			'',
 			new FauxRequest( [ 'method' => 'does-not-exist' ] ),
@@ -153,12 +192,98 @@ class SpecialELNSMWAdapterUITest extends SpecialPageTestBase {
 		$this->assertSame( 'Failed to process the request.', $result );
 	}
 
+	public function testProcessFormSucceedsForValidElabftwUrlAndRedirectsToProcessing() {
+		$this->installMockHttp( $this->makeFakeHttpRequest( json_encode( [ 'job_id' => 'job-123' ] ), 200 ) );
+		$page = $this->newContextualizedSpecialPage( new FauxRequest( [] ) );
+
+		$result = $page->processForm( [ 'eln-url' => 'https://elab.tu-clausthal.de/experiments.php?mode=view&id=42' ] );
+
+		$this->assertTrue( $result );
+		$this->assertStringContainsString(
+			'action=processing',
+			$page->getOutput()->getRedirect()
+		);
+		$this->assertStringContainsString(
+			'job_id=job-123',
+			$page->getOutput()->getRedirect()
+		);
+	}
+
+	public function testProcessFormReturnsServiceErrorMessageOnNon200Response() {
+		$this->installMockHttp( $this->makeFakeHttpRequest( 'Internal Server Error', 500 ) );
+		$page = $this->newContextualizedSpecialPage( new FauxRequest( [] ) );
+
+		$result = $page->processForm( [ 'eln-url' => 'https://elab.tu-clausthal.de/experiments.php?mode=view&id=42' ] );
+
+		$this->assertSame( 'Failed to process the request.', $result );
+	}
+
 	public function testProcessFileUploadFormRejectsMissingUpload() {
 		$page = $this->newContextualizedSpecialPage( new FauxRequest( [] ) );
 
 		$result = $page->processFileUploadForm( [ 'method' => 'some-upload-plugin' ] );
 
 		$this->assertSame( 'Please select a file to upload.', $result );
+	}
+
+	public function testProcessFileUploadFormRejectsWhenUploadDirNotConfigured() {
+		// checkServiceStatus() returns a status without 'upload_path'.
+		$this->installMockHttp( $this->makeFakeHttpRequest( json_encode( [ 'version' => '1.0' ] ), 200 ) );
+
+		$tempName = tempnam( sys_get_temp_dir(), 'upload' );
+		try {
+			$request = new FauxRequest( [] );
+			$request->setUploadData( [
+				'upload-file' => [
+					'name' => 'data.xlsx',
+					'type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+					'tmp_name' => $tempName,
+					'size' => 123,
+					'error' => UPLOAD_ERR_OK,
+				],
+			] );
+			$page = $this->newContextualizedSpecialPage( $request );
+
+			$result = $page->processFileUploadForm( [ 'method' => 'excel-local' ] );
+
+			$this->assertSame( 'Upload directory is not configured.', $result );
+		} finally {
+			if ( file_exists( $tempName ) ) {
+				unlink( $tempName );
+			}
+		}
+	}
+
+	public function testMethodExcelUploadShowsFileUploadFormWithDynamicFields() {
+		$this->setUserLang( 'qqx' );
+		$status = [
+			'plugins' => [
+				'excel-local' => [ 'type' => 'upload' ],
+			],
+		];
+		$pluginInfo = [
+			'fields' => [
+				[ 'name' => 'project', 'label' => 'Project', 'type' => 'text', 'required' => true ],
+				[ 'name' => 'category', 'label' => 'Category', 'type' => 'select', 'options' => [ 'A', 'B' ] ],
+			],
+		];
+		$this->installMockHttp( [
+			$this->makeFakeHttpRequest( json_encode( $status ), 200 ),
+			$this->makeFakeHttpRequest( json_encode( $pluginInfo ), 200 ),
+		] );
+
+		[ $html ] = $this->executeSpecialPage(
+			'',
+			new FauxRequest( [ 'method' => 'excel-local' ] ),
+			null,
+			$this->newAuthorizedPerformer()
+		);
+
+		$this->assertStringContainsString( '(elnsmwadapterui-form-upload-legend)', $html );
+		$this->assertStringContainsString( 'name="upload-file"', $html );
+		$this->assertStringContainsString( 'name="field_project"', $html );
+		$this->assertStringContainsString( 'name="field_category"', $html );
+		$this->assertStringContainsString( '<option value="A">A</option>', $html );
 	}
 
 	public function testResultsActionWithDataParameterRendersProtocolsAndLogMessages() {
