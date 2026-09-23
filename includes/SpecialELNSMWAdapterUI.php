@@ -12,7 +12,6 @@ use Psr\Log\LoggerInterface;
 use SpecialPage;
 use stdClass;
 use WebRequest;
-use Xml;
 
 /**
  * Special page for ELN SMW Adapter UI
@@ -403,18 +402,16 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 			'type' => 'file',
 			'name' => 'upload-file',
 			'class' => 'elnsmwadapterui-file-input',
-			'required' => 'required',
-			'onchange' => 'updateFileName(this)'
+			'required' => 'required'
 		] );
-		$html .= '<div class="elnsmwadapterui-file-drop-zone" ' .
-			'onclick="document.querySelector(\'.elnsmwadapterui-file-input\').click();">';
+		$html .= '<div class="elnsmwadapterui-file-drop-zone">';
 		$html .= '<div class="elnsmwadapterui-file-icon">📄</div>';
 		$html .= '<div class="elnsmwadapterui-file-text">' .
 			$this->msg( 'elnsmwadapterui-file-drop-text' )->escaped() . '</div>';
 		$html .= '</div>';
 		$html .= '<div class="elnsmwadapterui-selected-file" style="display: none;">';
 		$html .= '<span class="elnsmwadapterui-file-name"></span>';
-		$html .= '<button type="button" class="elnsmwadapterui-remove-file" onclick="clearFileName()">×</button>';
+		$html .= '<button type="button" class="elnsmwadapterui-remove-file">×</button>';
 		$html .= '</div>';
 		$html .= '</div>';
 
@@ -447,75 +444,7 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 		$out->addHTML( $html );
 
 		// Add JavaScript for file name display and drag-and-drop
-		$out->addInlineScript( "
-            function updateFileName(input) {
-                var fileName = input.files[0] ? input.files[0].name : '';
-                var fileNameSpan = document.querySelector('.elnsmwadapterui-file-name');
-                var selectedFileDiv = document.querySelector('.elnsmwadapterui-selected-file');
-                var dropZone = document.querySelector('.elnsmwadapterui-file-drop-zone');
-
-                if (fileName) {
-                    fileNameSpan.textContent = fileName;
-                    selectedFileDiv.style.display = 'block';
-                    dropZone.style.display = 'none';
-                } else {
-                    selectedFileDiv.style.display = 'none';
-                    dropZone.style.display = 'block';
-                }
-            }
-
-            function clearFileName() {
-                var fileInput = document.querySelector('.elnsmwadapterui-file-input');
-                var selectedFileDiv = document.querySelector('.elnsmwadapterui-selected-file');
-                var dropZone = document.querySelector('.elnsmwadapterui-file-drop-zone');
-
-                fileInput.value = '';
-                selectedFileDiv.style.display = 'none';
-                dropZone.style.display = 'block';
-            }
-
-            // Add drag-and-drop functionality
-            (function() {
-                var dropZone = document.querySelector('.elnsmwadapterui-file-drop-zone');
-                var fileInput = document.querySelector('.elnsmwadapterui-file-input');
-
-                if (dropZone && fileInput) {
-                    // Prevent default drag behaviors
-                    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(function(eventName) {
-                        dropZone.addEventListener(eventName, function(e) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                        }, false);
-                    });
-
-                    // Highlight drop zone when dragging over
-                    ['dragenter', 'dragover'].forEach(function(eventName) {
-                        dropZone.addEventListener(eventName, function() {
-                            dropZone.style.backgroundColor = '#f0f8ff';
-                            dropZone.style.borderColor = '#4a90e2';
-                        }, false);
-                    });
-
-                    ['dragleave', 'drop'].forEach(function(eventName) {
-                        dropZone.addEventListener(eventName, function() {
-                            dropZone.style.backgroundColor = '';
-                            dropZone.style.borderColor = '';
-                        }, false);
-                    });
-
-                    // Handle dropped files
-                    dropZone.addEventListener('drop', function(e) {
-                        var dt = e.dataTransfer;
-                        var files = dt.files;
-
-                        if (files.length > 0) {
-                            fileInput.files = files;
-                            updateFileName(fileInput);
-                        }
-                    }, false);
-                }
-            })();
-        " );
+		$out->addModules( 'ext.elnsmwadapterui.fileupload' );
 
 		// Display any messages
 		$this->displayMessages( $out );
@@ -779,110 +708,24 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 		$jobStatusUrl = rtrim( $server, '/' ) . '/sfb1368/eln-smw-adapter/job/' . urlencode( $jobId );
 		$resultsUrl = $this->getPageTitle()->getLocalURL( [ 'action' => 'results', 'job_id' => '__JOBID__' ] );
 
-		if ( version_compare( MW_VERSION, '1.41', '>=' ) ) {
-			$jobStatusUrlJs = Html::encodeJsVar( $jobStatusUrl );
-			$resultsUrlJs = Html::encodeJsVar( $resultsUrl );
-		} else {
-			// MW < 1.41: Html::encodeJsVar() did not exist; Xml::encodeJsVar() was the only option
-			$jobStatusUrlJs = Xml::encodeJsVar( $jobStatusUrl );
-			$resultsUrlJs = Xml::encodeJsVar( $resultsUrl );
-		}
-
 		$html = '<div class="elnsmwadapterui-processing">';
 		$html .= '<div class="elnsmwadapterui-section">';
 		$html .= '<h2 class="elnsmwadapterui-section-title">Processing Your Import</h2>';
 		$html .= '<div class="elnsmwadapterui-processing-content">';
 		$html .= '<div class="elnsmwadapterui-spinner"></div>';
-		$html .= '<p id="processing-status">Please wait while your import is being processed...</p>';
-		$html .= '<p id="processing-error" style="display:none; color: red;"></p>';
+		$html .= '<p class="elnsmwadapterui-processing-status">Please wait while your import is being processed...</p>';
+		$html .= '<p id="processing-error" class="elnsmwadapterui-processing-error"></p>';
 		$html .= '</div>';
 		$html .= '</div>';
 		$html .= '</div>';
 
 		$out->addHTML( $html );
 
-		// Add inline JavaScript for polling
-		$out->addInlineScript( "
-(function() {
-    var jobStatusUrl = " . $jobStatusUrlJs . ";
-    var resultsBaseUrl = " . $resultsUrlJs . ";
-    var pollInterval = 1000; // Poll every second
-    var maxAttempts = 180; // Max 180 seconds
-    var attempts = 0;
-
-    function pollJobStatus() {
-        attempts++;
-
-        if (attempts > maxAttempts) {
-            document.getElementById('processing-status').style.display = 'none';
-            document.getElementById('processing-error').textContent =
-                'Request timed out after 3 minutes. The import may still be processing. Please check back later.';
-            document.getElementById('processing-error').style.display = 'block';
-            return;
-        }
-
-        fetch(jobStatusUrl)
-            .then(function(response) {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.json();
-            })
-            .then(function(data) {
-                if (data.status === 'completed') {
-                    // Success - redirect to results page with job_id
-                    window.location.href = resultsBaseUrl.replace('__JOBID__', data.id);
-                } else if (data.status === 'failed') {
-                    // Failed - show error
-                    document.getElementById('processing-status').style.display = 'none';
-                    document.getElementById('processing-error').textContent =
-                        'Import failed: ' + (data.error || 'Unknown error');
-                    document.getElementById('processing-error').style.display = 'block';
-                } else {
-                    // Still processing - poll again
-                    setTimeout(pollJobStatus, pollInterval);
-                }
-            })
-            .catch(function(error) {
-                // Network error - retry
-                console.error('Polling error:', error);
-                setTimeout(pollJobStatus, pollInterval);
-            });
-    }
-
-    // Start polling
-    pollJobStatus();
-})();
-        " );
-
-		// Add CSS for spinner
-		$out->addInlineStyle( "
-.elnsmwadapterui-processing {
-    text-align: center;
-    padding: 40px 20px;
-}
-.elnsmwadapterui-processing-content {
-    padding: 20px;
-}
-.elnsmwadapterui-spinner {
-    border: 4px solid #f3f3f3;
-    border-top: 4px solid #3498db;
-    border-radius: 50%;
-    width: 50px;
-    height: 50px;
-    animation: spin 1s linear infinite;
-    margin: 0 auto 20px;
-}
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-#processing-status {
-    font-size: 16px;
-    color: #555;
-    margin: 10px 0;
-}
-        " );
+		$out->addJsConfigVars( [
+			'elnsmwadapteruiJobStatusUrl' => $jobStatusUrl,
+			'elnsmwadapteruiResultsUrl' => $resultsUrl,
+		] );
+		$out->addModules( 'ext.elnsmwadapterui.processing' );
 	}
 
 	/**

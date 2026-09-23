@@ -18,6 +18,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   checkout, so `.phan/baseline.php` is split per MediaWiki minor
   version (`.phan/baseline-1.39.php`, `.phan/baseline-1.43.php`,
   selected automatically via `.phan/config.php`).
+- Add ESLint (`eslint-config-wikimedia`) and Stylelint
+  (`stylelint-config-wikimedia`), wired into `npm run test`/`make ci`.
+  `mediawiki/no-unlabeled-buttonwidget` is disabled in `.eslintrc.json`:
+  in `eslint-plugin-mediawiki@0.7.1` (pulled in by
+  `eslint-config-wikimedia@0.28.2`), this rule throws a `TypeError` on
+  any `new` expression whose callee is not a member expression (e.g.
+  `new Error(...)`), not just `new OO.ui.ButtonWidget(...)` as intended
+  — an upstream bug, not a project-specific suppression.
+- Extract the inline `<script>` blocks in
+  `SpecialELNSMWAdapterUI::displayFileUploadForm()` and
+  `displayProcessingPage()` (added via `OutputPage::addInlineScript()`)
+  into proper ResourceLoader modules (`ext.elnsmwadapterui.fileupload`,
+  `ext.elnsmwadapterui.processing`), now that ESLint can lint them. The
+  processing page passes the job-status/results URLs to JS via
+  `OutputPage::addJsConfigVars()` instead of inline
+  `Html::encodeJsVar()`/`Xml::encodeJsVar()` string interpolation,
+  which also removes the MW 1.41 version guard. The inline `<style>`
+  block for the processing spinner moved into
+  `modules/ext.elnsmwadapterui.css`.
 
 ### Changed
 

@@ -1,0 +1,15 @@
+{
+	"name": "eln-smw-adapter-ui",
+	"private": true,
+	"scripts": {
+		"test": "npm run lint:js && npm run lint:styles",
+		"lint:js": "eslint --cache modules",
+		"lint:js:fix": "eslint --cache --fix modules",
+		"lint:styles": "stylelint modules/**/*.css",
+		"lint:styles:fix": "stylelint --fix modules/**/*.css"
+	},
+	"devDependencies": {
+		"eslint-config-wikimedia": "0.28.2",
+		"stylelint-config-wikimedia": "0.17.2"
+	}
+}

@@ -16,6 +16,9 @@ DB_IMAGE      ?= "mysql:8"
 # composer
 COMPOSER_EXT  ?= true
 
+# npm
+NODE_JS       ?= true
+
 include build/Makefile
 
 .PHONY: composer-phan
