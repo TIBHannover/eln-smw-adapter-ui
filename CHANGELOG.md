@@ -38,6 +38,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   block for the processing spinner moved into
   `modules/ext.elnsmwadapterui.css`.
 
+### Fixed
+
+- The coverage leg of the CI workflow called `make ci-coverage`, which
+  runs `npm run test-coverage` — a script `package.json` never defined
+  (only `test`, `lint:js`, `lint:styles`), since there is no JS test
+  runner in this extension, only linting. This broke every push/PR
+  build. The coverage leg now runs `make install composer-test-coverage
+  npm-test` directly: the PHP coverage report `codecov-action` reads
+  from, plus the same JS lint the non-coverage leg runs, without the
+  undefined npm script.
+
 ### Changed
 
 - Align `SpecialELNSMWAdapterUI` with the PHP coding standard: no

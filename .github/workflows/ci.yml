@@ -48,7 +48,7 @@ jobs:
         if: matrix.coverage == false
 
       - name: Run CI with coverage
-        run: mkdir -p build/coverage && make ci-coverage
+        run: mkdir -p build/coverage && make install composer-test-coverage npm-test
         if: matrix.coverage == true
 
       - name: Upload coverage
