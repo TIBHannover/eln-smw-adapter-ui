@@ -12,6 +12,7 @@ use Psr\Log\LoggerInterface;
 use SpecialPage;
 use stdClass;
 use WebRequest;
+use Xml;
 
 /**
  * Special page for ELN SMW Adapter UI
@@ -191,7 +192,7 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 
 		// Add upload options for each upload plugin
 		foreach ( $uploadPlugins as $pluginName ) {
-			$optionText = 'Upload file (' . htmlspecialchars( $pluginName ) . ')';
+			$optionText = 'Upload file (' . $pluginName . ')';
 			$html .= Html::element( 'option', [ 'value' => $pluginName ], $optionText );
 		}
 		$html .= Html::closeElement( 'select' );
@@ -550,7 +551,7 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 		}
 		$html .= '</label>';
 
-		$fieldName = 'field_' . htmlspecialchars( $field['name'] );
+		$fieldName = 'field_' . $field['name'];
 		$isRequired = isset( $field['required'] ) && $field['required'];
 
 		switch ( $field['type'] ) {
@@ -571,8 +572,8 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 				if ( isset( $field['options'] ) && is_array( $field['options'] ) ) {
 					foreach ( $field['options'] as $option ) {
 						$html .= Html::element( 'option', [
-							'value' => htmlspecialchars( $option )
-						], htmlspecialchars( $option ) );
+							'value' => $option
+						], $option );
 					}
 				}
 				$html .= Html::closeElement( 'select' );
@@ -778,6 +779,15 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 		$jobStatusUrl = rtrim( $server, '/' ) . '/sfb1368/eln-smw-adapter/job/' . urlencode( $jobId );
 		$resultsUrl = $this->getPageTitle()->getLocalURL( [ 'action' => 'results', 'job_id' => '__JOBID__' ] );
 
+		if ( version_compare( MW_VERSION, '1.41', '>=' ) ) {
+			$jobStatusUrlJs = Html::encodeJsVar( $jobStatusUrl );
+			$resultsUrlJs = Html::encodeJsVar( $resultsUrl );
+		} else {
+			// MW < 1.41: Html::encodeJsVar() did not exist; Xml::encodeJsVar() was the only option
+			$jobStatusUrlJs = Xml::encodeJsVar( $jobStatusUrl );
+			$resultsUrlJs = Xml::encodeJsVar( $resultsUrl );
+		}
+
 		$html = '<div class="elnsmwadapterui-processing">';
 		$html .= '<div class="elnsmwadapterui-section">';
 		$html .= '<h2 class="elnsmwadapterui-section-title">Processing Your Import</h2>';
@@ -794,8 +804,8 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 		// Add inline JavaScript for polling
 		$out->addInlineScript( "
 (function() {
-    var jobStatusUrl = " . json_encode( $jobStatusUrl ) . ";
-    var resultsBaseUrl = " . json_encode( $resultsUrl ) . ";
+    var jobStatusUrl = " . $jobStatusUrlJs . ";
+    var resultsBaseUrl = " . $resultsUrlJs . ";
     var pollInterval = 1000; // Poll every second
     var maxAttempts = 180; // Max 180 seconds
     var attempts = 0;
