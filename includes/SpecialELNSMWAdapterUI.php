@@ -32,10 +32,14 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 	private $messages = [];
 
 	/**
-	 * @param ConfigFactory $configFactory
+	 * No native type hint on $configFactory: on MW 1.39 (the minimum version required by
+	 * extension.json) ConfigFactory is still in the global namespace; MediaWiki\Config\ConfigFactory
+	 * (used on MW 1.43) rejects a global-namespace instance and vice versa, so a native type
+	 * hint here would break one of the two supported MW versions.
+	 * @param ConfigFactory|\ConfigFactory $configFactory
 	 * @param HttpRequestFactory $httpRequestFactory
 	 */
-	public function __construct( ConfigFactory $configFactory, HttpRequestFactory $httpRequestFactory ) {
+	public function __construct( $configFactory, HttpRequestFactory $httpRequestFactory ) {
 		parent::__construct( 'ELNSMWAdapterUI', 'elnsmwadapterui-use' );
 		$this->config = $configFactory->makeConfig( 'main' );
 		$this->httpRequestFactory = $httpRequestFactory;
