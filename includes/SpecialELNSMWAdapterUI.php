@@ -1,6 +1,6 @@
 <?php
 
-declare( strict_types = 1 );
+declare( strict_types=1 );
 
 namespace ELNSMWAdapterUI;
 
@@ -239,11 +239,7 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 		}
 
 		// Fallback for unknown methods
-		switch ( $method ) {
-			default:
-				$out->addHTML( '<div class="errorbox">Unknown method: ' . htmlspecialchars( $method ) . '</div>' );
-				break;
-		}
+		$out->addHTML( '<div class="errorbox">Unknown method: ' . htmlspecialchars( $method ) . '</div>' );
 	}
 
 	/**
@@ -828,14 +824,11 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 	 * Get CSS class for message type
 	 */
 	private function getMessageCssClass( string $type ): string {
-		switch ( $type ) {
-			case 'error':
-				return 'error';
-			case 'warning':
-				return 'warning';
-			default:
-				return 'notice';
-		}
+		return match ( $type ) {
+			'error' => 'error',
+			'warning' => 'warning',
+			default => 'notice',
+		};
 	}
 
 	/**

@@ -40,6 +40,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Align `SpecialELNSMWAdapterUI` with the PHP coding standard: no
+  spaces around `=` in `declare( strict_types=1 );`,
+  `getMessageCssClass()` rewritten as a `match()` expression, and the
+  unknown-method fallback in `displayMethodForm()` simplified from a
+  single-case `switch` to a plain early-return.
+
+### Changed
+
 - Raise minimum required MediaWiki version from 1.35.0 to 1.39.0.
 - Fix all MediaWiki-CodeSniffer violations to make `composer test` pass.
 
