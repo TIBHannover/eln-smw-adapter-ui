@@ -19,12 +19,14 @@
         ],
         "analyze": [
             "@lint",
-            "@phpcs"
+            "@phpcs",
+            "@phan"
         ],
         "fix": [
             "@phpcs-fix"
         ],
         "lint": "parallel-lint . --exclude vendor --exclude node_modules",
+        "phan": "phan --allow-polyfill-parser",
         "phpcs": "phpcs -ps",
         "phpcs-fix": "phpcbf -p",
         "phpunit": [

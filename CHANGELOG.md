@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Set up docker-compose-ci (DCI) based GitHub Actions CI, covering
   MediaWiki 1.39/PHP 8.1 and 1.43/PHP 8.3 (with Codecov coverage
   reporting).
+- Add Phan static analysis (`composer phan`), wired into `composer
+  analyze`/CI, with an initial baseline for pre-existing findings.
 
 ### Changed
 

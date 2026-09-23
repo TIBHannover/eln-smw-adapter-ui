@@ -17,3 +17,13 @@ DB_IMAGE      ?= "mysql:8"
 COMPOSER_EXT  ?= true
 
 include build/Makefile
+
+.PHONY: composer-phan
+composer-phan: .init ## Run Phan static analysis
+	$(compose-exec-wiki) bash -c "cd $(EXTENSION_FOLDER) && composer phan $(COMPOSER_PARAMS)"
+
+.PHONY: composer-phan-update-baseline
+composer-phan-update-baseline: .init ## Re-generate baseline and fix indentation for PHPCS
+	$(compose-exec-wiki) bash -c "cd $(EXTENSION_FOLDER) && composer phan -- --save-baseline=.phan/baseline.php"
+	$(compose) cp wiki:$(EXTENSION_FOLDER)/.phan/baseline.php /tmp/baseline.php
+	unexpand --first-only -t 4 /tmp/baseline.php > .phan/baseline.php && rm /tmp/baseline.php
