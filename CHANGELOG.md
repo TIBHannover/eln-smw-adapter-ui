@@ -13,7 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   MediaWiki 1.39/PHP 8.1 and 1.43/PHP 8.3 (with Codecov coverage
   reporting).
 - Add Phan static analysis (`composer phan`), wired into `composer
-  analyze`/CI, with an initial baseline for pre-existing findings.
+  analyze`/CI, with an initial baseline for pre-existing findings. Phan
+  is analysed separately against each CI matrix leg's MediaWiki core
+  checkout, so `.phan/baseline.php` is split per MediaWiki minor
+  version (`.phan/baseline-1.39.php`, `.phan/baseline-1.43.php`,
+  selected automatically via `.phan/config.php`).
 
 ### Changed
 
