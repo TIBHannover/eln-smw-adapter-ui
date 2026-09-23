@@ -5,6 +5,7 @@ namespace ELNSMWAdapterUI;
 use Html;
 use MediaWiki\Config\Config;
 use MediaWiki\Config\ConfigFactory;
+use MediaWiki\Http\HttpRequestFactory;
 use MediaWiki\Logger\LoggerFactory;
 use Psr\Log\LoggerInterface;
 use SpecialPage;
@@ -24,15 +25,20 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 	/** @var LoggerInterface */
 	private $logger;
 
+	/** @var HttpRequestFactory */
+	private $httpRequestFactory;
+
 	/** @var array */
 	private $messages = [];
 
 	/**
 	 * @param ConfigFactory $configFactory
+	 * @param HttpRequestFactory $httpRequestFactory
 	 */
-	public function __construct( ConfigFactory $configFactory ) {
+	public function __construct( ConfigFactory $configFactory, HttpRequestFactory $httpRequestFactory ) {
 		parent::__construct( 'ELNSMWAdapterUI', 'elnsmwadapterui-use' );
 		$this->config = $configFactory->makeConfig( 'main' );
+		$this->httpRequestFactory = $httpRequestFactory;
 		$this->logger = LoggerFactory::getInstance( 'ELNSMWAdapterUI' );
 	}
 
@@ -1095,36 +1101,31 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 			'id' => $id
 		] );
 
-		$ch = curl_init();
-		curl_setopt_array( $ch, [
-			CURLOPT_URL => $url,
-			CURLOPT_POST => true,
-			CURLOPT_POSTFIELDS => json_encode( $payload ),
-			CURLOPT_HTTPHEADER => [
-				'Content-Type: application/json',
-				'User-Agent: MediaWiki-ELNSMWAdapterUI/0.2.0'
-			],
-			CURLOPT_RETURNTRANSFER => true,
-			CURLOPT_TIMEOUT => 120,
-			CURLOPT_CONNECTTIMEOUT => 10,
-			CURLOPT_FOLLOWLOCATION => false,
-			CURLOPT_SSL_VERIFYPEER => true,
-		] );
+		$request = $this->httpRequestFactory->create( $url, [
+			'method' => 'POST',
+			'postData' => json_encode( $payload ),
+			'timeout' => 120,
+			'connectTimeout' => 10,
+			'sslVerifyHost' => true,
+			'sslVerifyCert' => true,
+			'followRedirects' => false,
+			'userAgent' => 'MediaWiki-ELNSMWAdapterUI/0.2.0',
+		], __METHOD__ );
+		$request->setHeader( 'Content-Type', 'application/json' );
 
-		$response = curl_exec( $ch );
-		$httpCode = curl_getinfo( $ch, CURLINFO_HTTP_CODE );
-		$curlError = curl_error( $ch );
-		curl_close( $ch );
+		$status = $request->execute();
+		$response = $request->getContent();
 
-		if ( $response === false || !empty( $curlError ) ) {
-			$this->logger->error( 'cURL error when calling adapter service', [
-				'error' => $curlError,
+		if ( !$status->isOK() ) {
+			$this->logger->error( 'HTTP error when calling adapter service', [
+				'error' => (string)$status,
 				'url' => $url
 			] );
 			$this->addMessage( 'error', 'elnsmwadapterui-error-service-offline' );
 			return null;
 		}
 
+		$httpCode = $request->getStatus();
 		if ( $httpCode !== 200 ) {
 			$this->logger->warning( 'HTTP error from adapter service', [
 				'http_code' => $httpCode,
@@ -1172,27 +1173,25 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 	 * @return array|stdClass|null Decoded response, or null on failure
 	 */
 	private function httpGetJson( $url, $associative = true, $timeout = 5, $connectTimeout = 3 ) {
-		$ch = curl_init();
-		curl_setopt( $ch, CURLOPT_URL, $url );
-		curl_setopt( $ch, CURLOPT_RETURNTRANSFER, true );
-		curl_setopt( $ch, CURLOPT_TIMEOUT, $timeout );
-		curl_setopt( $ch, CURLOPT_CONNECTTIMEOUT, $connectTimeout );
-		curl_setopt( $ch, CURLOPT_SSL_VERIFYPEER, true );
-		curl_setopt( $ch, CURLOPT_HTTPHEADER, [ 'Content-Type: application/json' ] );
+		$request = $this->httpRequestFactory->create( $url, [
+			'timeout' => $timeout,
+			'connectTimeout' => $connectTimeout,
+			'sslVerifyHost' => true,
+			'sslVerifyCert' => true,
+			'followRedirects' => false,
+		], __METHOD__ );
+		$request->setHeader( 'Content-Type', 'application/json' );
 
-		$response = curl_exec( $ch );
-		$httpCode = curl_getinfo( $ch, CURLINFO_HTTP_CODE );
-		$curlError = curl_error( $ch );
-		curl_close( $ch );
-
-		if ( $response === false || $curlError !== '' ) {
-			$this->logger->error( 'cURL error when calling adapter service', [
-				'error' => $curlError,
+		$status = $request->execute();
+		if ( !$status->isOK() ) {
+			$this->logger->error( 'HTTP error when calling adapter service', [
+				'error' => (string)$status,
 				'url' => $url
 			] );
 			return null;
 		}
 
+		$httpCode = $request->getStatus();
 		if ( $httpCode !== 200 ) {
 			$this->logger->warning( 'HTTP error from adapter service', [
 				'http_code' => $httpCode,
@@ -1201,7 +1200,7 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 			return null;
 		}
 
-		return json_decode( $response, $associative );
+		return json_decode( $request->getContent(), $associative );
 	}
 
 	/**

@@ -16,7 +16,7 @@
     "SpecialPages": {
         "ELNSMWAdapterUI": {
             "class": "ELNSMWAdapterUI\\SpecialELNSMWAdapterUI",
-            "services": ["ConfigFactory"]
+            "services": ["ConfigFactory", "HttpRequestFactory"]
         }
     },
     "config": {

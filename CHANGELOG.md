@@ -41,6 +41,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Makes the `services` declaration in `extension.json` actually take
   effect and allows constructing the special page without a full
   request context.
+- Replace raw `curl_*` calls in `httpGetJson()` and
+  `callAdapterService()` with MediaWiki's `HttpRequestFactory`
+  (injected via the constructor). No change to the requests sent to
+  the adapter service (same timeouts, SSL verification, redirect
+  behaviour, and headers); this only makes the HTTP layer mockable in
+  PHPUnit, which was previously impossible without a running adapter
+  service.
 
 ### Removed
 
