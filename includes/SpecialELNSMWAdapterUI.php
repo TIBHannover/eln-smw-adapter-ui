@@ -1,14 +1,16 @@
 <?php
 
+declare( strict_types = 1 );
+
 namespace ELNSMWAdapterUI;
 
 use Html;
-use MediaWiki\Config\Config;
-use MediaWiki\Config\ConfigFactory;
 use MediaWiki\Http\HttpRequestFactory;
 use MediaWiki\Logger\LoggerFactory;
+use OutputPage;
 use Psr\Log\LoggerInterface;
 use SpecialPage;
+use stdClass;
 use WebRequest;
 
 /**
@@ -19,7 +21,12 @@ use WebRequest;
  */
 class SpecialELNSMWAdapterUI extends SpecialPage {
 
-	/** @var Config */
+	/**
+	 * No native type hint: on MW 1.39 (the minimum version required by extension.json)
+	 * Config is in the global namespace; MediaWiki\Config\Config (used on MW 1.43) is a
+	 * different class from PHP's point of view.
+	 * @var \Config|\MediaWiki\Config\Config
+	 */
 	private $config;
 
 	/** @var LoggerInterface */
@@ -28,7 +35,7 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 	/** @var HttpRequestFactory */
 	private $httpRequestFactory;
 
-	/** @var array */
+	/** @var array<int, array{type: string, message: string}> */
 	private $messages = [];
 
 	/**
@@ -36,7 +43,7 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 	 * extension.json) ConfigFactory is still in the global namespace; MediaWiki\Config\ConfigFactory
 	 * (used on MW 1.43) rejects a global-namespace instance and vice versa, so a native type
 	 * hint here would break one of the two supported MW versions.
-	 * @param ConfigFactory|\ConfigFactory $configFactory
+	 * @param \MediaWiki\Config\ConfigFactory|\ConfigFactory $configFactory
 	 * @param HttpRequestFactory $httpRequestFactory
 	 */
 	public function __construct( $configFactory, HttpRequestFactory $httpRequestFactory ) {
@@ -78,10 +85,8 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 
 	/**
 	 * Validate the provided URL
-	 * @param string $url
-	 * @return bool
 	 */
-	private function isValidUrl( $url ) {
+	private function isValidUrl( string $url ): bool {
 		if ( empty( $url ) ) {
 			$this->logger->debug( 'URL validation failed: empty URL' );
 			return false;
@@ -101,10 +106,8 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 
 	/**
 	 * Display ELN selection form (step 1)
-	 * @param OutputPage $out
-	 * @param WebRequest $request
 	 */
-	private function displaySelectionForm( $out, $request ) {
+	private function displaySelectionForm( OutputPage $out, WebRequest $request ): void {
 		// Check if form was submitted - HTMLForm prefixes with 'wp'
 		$elnType = $request->getVal( 'wpeln-type', '' );
 		if ( empty( $elnType ) ) {
@@ -218,10 +221,8 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 
 	/**
 	 * Display method-specific form (step 2)
-	 * @param OutputPage $out
-	 * @param string $method
 	 */
-	private function displayMethodForm( $out, $method ) {
+	private function displayMethodForm( OutputPage $out, string $method ): void {
 		if ( $method === 'url' ) {
 			$this->displayUrlForm( $out );
 			return;
@@ -247,10 +248,8 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 
 	/**
 	 * Display URL form (original form)
-	 * @param OutputPage $out
-	 * @param string $elnUrl
 	 */
-	private function displayUrlForm( $out, $elnUrl = '' ) {
+	private function displayUrlForm( OutputPage $out, string $elnUrl = '' ): void {
 		$request = $this->getRequest();
 
 		// Handle form submission
@@ -334,10 +333,8 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 
 	/**
 	 * Display file upload form
-	 * @param OutputPage $out
-	 * @param string $method
 	 */
-	private function displayFileUploadForm( $out, $method ) {
+	private function displayFileUploadForm( OutputPage $out, string $method ): void {
 		$request = $this->getRequest();
 
 		// Handle form submission first
@@ -528,9 +525,8 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 
 	/**
 	 * Add back to selection button
-	 * @param OutputPage $out
 	 */
-	private function addBackToSelectionButton( $out ) {
+	private function addBackToSelectionButton( OutputPage $out ): void {
 		$html = '<div class="elnsmwadapterui-back-selection">';
 		$html .= Html::element( 'a', [
 			'href' => $this->getPageTitle()->getLocalURL(),
@@ -542,10 +538,10 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 
 	/**
 	 * Render a dynamic form field based on field metadata
-	 * @param array $field Field metadata from plugin info
+	 * @param array{name: string, label: string, type: string, required?: bool, options?: string[]} $field
 	 * @return string HTML for the field
 	 */
-	private function renderDynamicField( $field ) {
+	private function renderDynamicField( array $field ): string {
 		$html = '<div class="elnsmwadapterui-form-field">';
 		$html .= '<label class="elnsmwadapterui-form-label">';
 		$html .= htmlspecialchars( $field['label'] );
@@ -599,11 +595,10 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 
 	/**
 	 * Process URL form submission callback
-	 * @param array $data
-	 * @return bool|string
+	 * @param array $data Expected key: 'eln-url' (string)
 	 */
-	public function processForm( $data ) {
-		$elnUrl = isset( $data['eln-url'] ) ? $data['eln-url'] : '';
+	public function processForm( array $data ): bool|string {
+		$elnUrl = isset( $data['eln-url'] ) ? (string)$data['eln-url'] : '';
 
 		if ( !$this->isValidUrl( $elnUrl ) ) {
 			return 'Please provide a valid URL.';
@@ -635,11 +630,10 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 
 	/**
 	 * Process file upload form submission
-	 * @param array $data
-	 * @return bool|string
+	 * @param array $data Expected key: 'method' (string)
 	 */
-	public function processFileUploadForm( $data ) {
-		$method = isset( $data['method'] ) ? $data['method'] : '';
+	public function processFileUploadForm( array $data ): bool|string {
+		$method = isset( $data['method'] ) ? (string)$data['method'] : '';
 
 		// Handle file upload
 		$request = $this->getRequest();
@@ -722,13 +716,12 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 
 	/**
 	 * Get upload directory path
-	 * @return string|false
 	 */
-	private function getUploadDirectory() {
+	private function getUploadDirectory(): string|false {
 		// Get upload path from service status
 		$status = $this->checkServiceStatus();
 		if ( $status && isset( $status['upload_path'] ) ) {
-			return $status['upload_path'];
+			return (string)$status['upload_path'];
 		}
 
 		$this->logger->error( 'Upload path not available from service' );
@@ -737,10 +730,8 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 
 	/**
 	 * Display results page
-	 * @param OutputPage $out
-	 * @param WebRequest $request
 	 */
-	private function displayResultsPage( $out, $request ) {
+	private function displayResultsPage( OutputPage $out, WebRequest $request ): void {
 		// Check if we have job_id (new method) or data (old method for backwards compat)
 		$jobId = $request->getVal( 'job_id', '' );
 		$data = $request->getVal( 'data', '' );
@@ -749,7 +740,7 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 
 		if ( !empty( $jobId ) ) {
 			// Fetch result from backend via job_id
-			$serviceUrl = $this->config->get( 'ELNSMWAdapterUIServiceURL' );
+			$serviceUrl = (string)$this->config->get( 'ELNSMWAdapterUIServiceURL' );
 			$jobUrl = rtrim( $serviceUrl, '/' ) . '/job/' . urlencode( $jobId );
 
 			$jobData = $this->httpGetJson( $jobUrl, false, 10 );
@@ -771,10 +762,8 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 
 	/**
 	 * Display processing page with JavaScript polling
-	 * @param OutputPage $out
-	 * @param WebRequest $request
 	 */
-	private function displayProcessingPage( $out, $request ) {
+	private function displayProcessingPage( OutputPage $out, WebRequest $request ): void {
 		$jobId = $request->getVal( 'job_id', '' );
 		if ( empty( $jobId ) ) {
 			$out->addHTML( '<div class="errorbox">No job ID provided.</div>' );
@@ -785,7 +774,7 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 
 		// Use public job status URL that browser can access (via nginx proxy)
 		// Construct from $wgServer (https://service.tib.eu) + /sfb1368/eln-smw-adapter/job/
-		$server = $this->config->get( 'Server' );
+		$server = (string)$this->config->get( 'Server' );
 		$jobStatusUrl = rtrim( $server, '/' ) . '/sfb1368/eln-smw-adapter/job/' . urlencode( $jobId );
 		$resultsUrl = $this->getPageTitle()->getLocalURL( [ 'action' => 'results', 'job_id' => '__JOBID__' ] );
 
@@ -888,10 +877,8 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 
 	/**
 	 * Display results after processing
-	 * @param OutputPage $out
-	 * @param stdClass|null $result
 	 */
-	private function displayResults( $out, $result ) {
+	private function displayResults( OutputPage $out, ?stdClass $result ): void {
 		if ( !$result ) {
 			$out->addHTML( '<div class="errorbox">' .
 				$this->msg( 'elnsmwadapterui-error-service-offline' )->escaped() .
@@ -986,10 +973,8 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 
 	/**
 	 * Get CSS class for message type
-	 * @param string $type
-	 * @return string
 	 */
-	private function getMessageCssClass( $type ) {
+	private function getMessageCssClass( string $type ): string {
 		switch ( $type ) {
 			case 'error':
 				return 'error';
@@ -1002,12 +987,10 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 
 	/**
 	 * Process protocols from ELN URL or file path
-	 * @param string $elnUrlOrPath
-	 * @param string $method
-	 * @param array $dynamicFields
-	 * @return stdClass|null
 	 */
-	private function adaptProtocols( $elnUrlOrPath, $method = 'url', $dynamicFields = [] ) {
+	private function adaptProtocols(
+		string $elnUrlOrPath, string $method = 'url', array $dynamicFields = []
+	): ?stdClass {
 		if ( $method === 'url' ) {
 			// Handle URL-based processing (original logic)
 			$parsedUrl = parse_url( $elnUrlOrPath );
@@ -1032,12 +1015,10 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 
 	/**
 	 * Process uploaded file
-	 * @param string $filePath
-	 * @param string $method
-	 * @param array $dynamicFields
-	 * @return stdClass|null
 	 */
-	private function processUploadedFile( $filePath, $method, $dynamicFields = [] ) {
+	private function processUploadedFile(
+		string $filePath, string $method, array $dynamicFields = []
+	): ?stdClass {
 		if ( !file_exists( $filePath ) ) {
 			$this->addMessage( 'error', 'elnsmwadapterui-error-file-not-found' );
 			return null;
@@ -1053,9 +1034,8 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 	 * Process eLabFTW URL and extract experiment ID
 	 * @param array $parsedUrl
 	 * @param array $dynamicFields
-	 * @return stdClass|null
 	 */
-	private function processELabFTWUrl( $parsedUrl, $dynamicFields = [] ) {
+	private function processELabFTWUrl( array $parsedUrl, array $dynamicFields = [] ): ?stdClass {
 		if ( !isset( $parsedUrl['query'] ) ) {
 			$this->addMessage( 'error', 'elnsmwadapterui-error-missing-query' );
 			return null;
@@ -1068,7 +1048,7 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 			return null;
 		}
 
-		return $this->callAdapterService( 'eLabFTW', $query['id'], $dynamicFields );
+		return $this->callAdapterService( 'eLabFTW', (string)$query['id'], $dynamicFields );
 	}
 
 	/**
@@ -1076,10 +1056,9 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 	 * @param string $eln
 	 * @param string $id
 	 * @param array $additionalData Additional data including user, dynamic fields, etc.
-	 * @return stdClass|null
 	 */
-	private function callAdapterService( $eln, $id, $additionalData = [] ) {
-		$serviceUrl = $this->config->get( 'ELNSMWAdapterUIServiceURL' );
+	private function callAdapterService( string $eln, string $id, array $additionalData = [] ): ?stdClass {
+		$serviceUrl = (string)$this->config->get( 'ELNSMWAdapterUIServiceURL' );
 		$url = rtrim( $serviceUrl, '/' ) . '/adapt-async';
 
 		// Get current user - prefer real name, fallback to username
@@ -1169,14 +1148,16 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 	}
 
 	/**
-	 * Perform a GET request against the adapter service and decode the JSON response
+	 * Perform a GET request against the adapter service and decode the JSON response.
+	 * No native return type hint: json_decode() can return a scalar if the adapter
+	 * service ever responds with non-object/array JSON, which the callers of this
+	 * method are not designed to receive; that edge case should degrade gracefully
+	 * (e.g. isset() on a non-array/object silently returning false) rather than crash.
 	 * @param string $url
 	 * @param bool $associative Decode JSON objects as associative arrays instead of stdClass
-	 * @param int $timeout
-	 * @param int $connectTimeout
-	 * @return array|stdClass|null Decoded response, or null on failure
+	 * @return mixed Decoded response, or null on failure
 	 */
-	private function httpGetJson( $url, $associative = true, $timeout = 5, $connectTimeout = 3 ) {
+	private function httpGetJson( string $url, bool $associative = true, int $timeout = 5, int $connectTimeout = 3 ) {
 		$request = $this->httpRequestFactory->create( $url, [
 			'timeout' => $timeout,
 			'connectTimeout' => $connectTimeout,
@@ -1209,25 +1190,26 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 
 	/**
 	 * Check the status of the adapter service
-	 * @return array|null Status information or null if unreachable
+	 * @return array|null Status information or null if unreachable, or malformed
 	 */
-	private function checkServiceStatus() {
-		$serviceUrl = $this->config->get( 'ELNSMWAdapterUIServiceURL' );
+	private function checkServiceStatus(): ?array {
+		$serviceUrl = (string)$this->config->get( 'ELNSMWAdapterUIServiceURL' );
 		$statusUrl = rtrim( $serviceUrl, '/' ) . '/status';
 
-		return $this->httpGetJson( $statusUrl );
+		$status = $this->httpGetJson( $statusUrl );
+		return is_array( $status ) ? $status : null;
 	}
 
 	/**
 	 * Get plugin info including dynamic form fields
-	 * @param string $pluginName
-	 * @return array|null Plugin info or null if unreachable
+	 * @return array|null Plugin info or null if unreachable, or malformed
 	 */
-	private function getPluginInfo( $pluginName ) {
-		$serviceUrl = $this->config->get( 'ELNSMWAdapterUIServiceURL' );
+	private function getPluginInfo( string $pluginName ): ?array {
+		$serviceUrl = (string)$this->config->get( 'ELNSMWAdapterUIServiceURL' );
 		$pluginInfoUrl = rtrim( $serviceUrl, '/' ) . '/plugin-info/' . urlencode( $pluginName );
 
-		return $this->httpGetJson( $pluginInfoUrl );
+		$pluginInfo = $this->httpGetJson( $pluginInfoUrl );
+		return is_array( $pluginInfo ) ? $pluginInfo : null;
 	}
 
 	/**
@@ -1236,7 +1218,7 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 	 * @param string $messageKey
 	 * @param array $params
 	 */
-	private function addMessage( $type, $messageKey, $params = [] ) {
+	private function addMessage( string $type, string $messageKey, array $params = [] ): void {
 		$this->messages[] = [
 			'type' => $type,
 			'message' => $this->msg( $messageKey, $params )->text()
@@ -1245,9 +1227,8 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 
 	/**
 	 * Display accumulated messages
-	 * @param OutputPage $out
 	 */
-	private function displayMessages( $out ): void {
+	private function displayMessages( OutputPage $out ): void {
 		foreach ( $this->messages as $message ) {
 			$cssClass = $this->getMessageCssClass( $message['type'] );
 			$out->addHTML( Html::element( 'div', [

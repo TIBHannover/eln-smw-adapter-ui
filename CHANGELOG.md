@@ -48,6 +48,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   behaviour, and headers); this only makes the HTTP layer mockable in
   PHPUnit, which was previously impossible without a running adapter
   service.
+- Add native PHP type declarations and `declare(strict_types=1)` to
+  `SpecialELNSMWAdapterUI`, following this project's coding
+  conventions. `checkServiceStatus()` and `getPluginInfo()` now
+  explicitly return `null` if the adapter service responds with
+  well-formed but non-object/array JSON, instead of passing that value
+  through to callers that assume array access will work on it.
 
 ### Removed
 
