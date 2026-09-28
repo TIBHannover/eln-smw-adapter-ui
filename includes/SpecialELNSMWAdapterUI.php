@@ -586,6 +586,18 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 	}
 
 	/**
+	 * Check the host against $wgELNSMWAdapterUIAllowedELabFTWHosts (case-insensitive).
+	 */
+	private function isAllowedELabFTWHost( string $host ): bool {
+		$allowedHosts = array_map(
+			'strtolower',
+			(array)$this->config->get( 'ELNSMWAdapterUIAllowedELabFTWHosts' )
+		);
+
+		return in_array( strtolower( $host ), $allowedHosts, true );
+	}
+
+	/**
 	 * Process protocols from ELN URL or file path
 	 */
 	private function adaptProtocols(
@@ -600,13 +612,12 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 				return null;
 			}
 
-			switch ( $parsedUrl['host'] ) {
-				case 'elab.tu-clausthal.de':
-					return $this->processELabFTWUrl( $parsedUrl, $dynamicFields );
-				default:
-					$this->addMessage( 'error', 'elnsmwadapterui-error-unsupported-eln', [ $parsedUrl['host'] ] );
-					return null;
+			if ( !$this->isAllowedELabFTWHost( $parsedUrl['host'] ) ) {
+				$this->addMessage( 'error', 'elnsmwadapterui-error-unsupported-eln', [ $parsedUrl['host'] ] );
+				return null;
 			}
+
+			return $this->processELabFTWUrl( $parsedUrl, $dynamicFields );
 		} else {
 			// Handle file-based processing
 			return $this->processUploadedFile( $elnUrlOrPath, $method, $dynamicFields );

@@ -176,6 +176,25 @@ class SpecialELNSMWAdapterUITest extends SpecialPageTestBase {
 		$this->assertSame( 'Failed to process the request.', $result );
 	}
 
+	public function testProcessFormAcceptsHostFromConfiguredAllowedHosts() {
+		$this->overrideConfigValue( 'ELNSMWAdapterUIAllowedELabFTWHosts', [ 'Elab.Example.org' ] );
+		$this->installMockHttp( $this->makeFakeHttpRequest( json_encode( [ 'job_id' => 'job-123' ] ), 200 ) );
+		$page = $this->newContextualizedSpecialPage( new FauxRequest( [] ) );
+
+		$result = $page->processForm( [ 'eln-url' => 'https://elab.example.org/experiments.php?mode=view&id=42' ] );
+
+		$this->assertTrue( $result );
+	}
+
+	public function testProcessFormRejectsDefaultHostWhenNotInConfiguredAllowedHosts() {
+		$this->overrideConfigValue( 'ELNSMWAdapterUIAllowedELabFTWHosts', [ 'elab.example.org' ] );
+		$page = $this->newContextualizedSpecialPage( new FauxRequest( [] ) );
+
+		$result = $page->processForm( [ 'eln-url' => 'https://elab.tu-clausthal.de/experiments.php?mode=view&id=42' ] );
+
+		$this->assertSame( 'Failed to process the request.', $result );
+	}
+
 	public function testProcessFormRejectsElabftwUrlWithoutQuery() {
 		$page = $this->newContextualizedSpecialPage( new FauxRequest( [] ) );
 

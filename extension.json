@@ -31,6 +31,10 @@
         "ELNSMWAdapterUIUploadDir": {
             "value": "/tmp/elnsmwadapterui",
             "description": "Directory for uploaded files"
+        },
+        "ELNSMWAdapterUIAllowedELabFTWHosts": {
+            "value": ["elab.tu-clausthal.de"],
+            "description": "Host names of the eLabFTW instances from which URLs may be imported"
         }
     },
     "GroupPermissions": {

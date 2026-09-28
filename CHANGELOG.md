@@ -23,6 +23,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Add `$wgELNSMWAdapterUIAllowedELabFTWHosts` (array of host names) to
+  configure which eLabFTW instances may be imported from, replacing the
+  host `elab.tu-clausthal.de` that was hardcoded in
+  `SpecialELNSMWAdapterUI::adaptProtocols()`. The default is
+  `[ 'elab.tu-clausthal.de' ]`, so existing installations keep working
+  without changes.
 - Set up docker-compose-ci (DCI) based GitHub Actions CI, covering
   MediaWiki 1.39/PHP 8.1 and 1.43/PHP 8.3 (with Codecov coverage
   reporting).

@@ -16,6 +16,7 @@ wfLoadExtension("ELNSMWAdapterUI");
 ```php
 $wgELNSMWAdapterUIServiceURL = "http://localhost:5000";  // Backend service URL
 $wgELNSMWAdapterUIWikiURL = "https://your-wiki.com";     // Target wiki URL
+$wgELNSMWAdapterUIAllowedELabFTWHosts = [ "elab.example.org" ]; // Allowed eLabFTW hosts (default: [ "elab.tu-clausthal.de" ])
 ```
 
 ## Usage
