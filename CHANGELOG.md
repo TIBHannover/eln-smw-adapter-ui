@@ -65,6 +65,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Replace raw HTML string concatenation in `SpecialELNSMWAdapterUI`
+  with `TemplateParser` + Mustache templates (new `templates/`
+  directory) for the selection, URL, upload, processing and results
+  views, and `Html::element()`/`Html::rawElement()` for error boxes and
+  the back button. All values are now escaped by the template engine;
+  the rendered markup is unchanged.
 - Replace all inline `style` attributes (service status indicators,
   required-field asterisk, file upload and processing page visibility
   toggles, drag-over highlight) with BEM classes and modifiers in

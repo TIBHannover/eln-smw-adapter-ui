@@ -1,0 +1,14 @@
+<div class="elnsmwadapterui-form-field elnsmwadapterui-form__field">
+	<label class="elnsmwadapterui-form-label elnsmwadapterui-form__label">{{label}}{{#required}} <span class="elnsmwadapterui-form__required">*</span>{{/required}}</label>
+	{{#isSelect}}
+	<select name="{{name}}" class="elnsmwadapterui-form-select elnsmwadapterui-form__select"{{#required}} required{{/required}}>
+		<option value="" selected disabled>-- Please select --</option>
+		{{#options}}
+		<option value="{{.}}">{{.}}</option>
+		{{/options}}
+	</select>
+	{{/isSelect}}
+	{{^isSelect}}
+	<input type="text" name="{{name}}" class="elnsmwadapterui-form-input elnsmwadapterui-form__input"{{#required}} required{{/required}}>
+	{{/isSelect}}
+</div>

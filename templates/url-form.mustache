@@ -1,0 +1,16 @@
+<div class="elnsmwadapterui-form-container elnsmwadapterui-form">
+	<div class="elnsmwadapterui-section">
+		<h2 class="elnsmwadapterui-section-title elnsmwadapterui-section__title">{{legend}}</h2>
+		<div class="elnsmwadapterui-form-content elnsmwadapterui-form__content">
+			<p class="elnsmwadapterui-form-description elnsmwadapterui-form__description">{{help}}</p>
+			<form method="post" action="{{action}}">
+				<input type="hidden" name="wpEditToken" value="{{token}}">
+				<div class="elnsmwadapterui-form-field elnsmwadapterui-form__field">
+					<label class="elnsmwadapterui-form-label elnsmwadapterui-form__label">{{label}}</label>
+					<input type="url" name="eln-url" class="elnsmwadapterui-form-input elnsmwadapterui-form__input" placeholder="{{placeholder}}" required value="{{elnUrl}}">
+				</div>
+				{{> submit-button}}
+			</form>
+		</div>
+	</div>
+</div>
