@@ -11,7 +11,7 @@ return [
 	// # Issue statistics:
 	// PhanPluginDuplicateAdjacentStatement : 10+ occurrences
 	// MediaWikiNoEmptyIfDefined : 8 occurrences
-	// PhanUndeclaredClassMethod : 7 occurrences
+	// PhanUndeclaredClassMethod : 8 occurrences
 	// PhanUndeclaredStaticMethod : 2 occurrences
 	// PhanNoopSwitchCases : 1 occurrence
 	// PhanParamSignatureMismatch : 1 occurrence
@@ -24,7 +24,7 @@ return [
 			'PhanNoopSwitchCases' => ['\\ELNSMWAdapterUI\\SpecialELNSMWAdapterUI::displayMethodForm'],
 			'PhanParamSignatureMismatch' => ['\\ELNSMWAdapterUI\\SpecialELNSMWAdapterUI::getDescription'],
 			'PhanPluginDuplicateAdjacentStatement' => ['\\ELNSMWAdapterUI\\SpecialELNSMWAdapterUI::displayFileUploadForm', '\\ELNSMWAdapterUI\\SpecialELNSMWAdapterUI::displayProcessingPage', '\\ELNSMWAdapterUI\\SpecialELNSMWAdapterUI::displayResults', '\\ELNSMWAdapterUI\\SpecialELNSMWAdapterUI::displaySelectionForm', '\\ELNSMWAdapterUI\\SpecialELNSMWAdapterUI::displayUrlForm'],
-			'PhanUndeclaredClassMethod' => ['\\ELNSMWAdapterUI\\SpecialELNSMWAdapterUI::__construct', '\\ELNSMWAdapterUI\\SpecialELNSMWAdapterUI::callAdapterService', '\\ELNSMWAdapterUI\\SpecialELNSMWAdapterUI::checkServiceStatus', '\\ELNSMWAdapterUI\\SpecialELNSMWAdapterUI::displayProcessingPage', '\\ELNSMWAdapterUI\\SpecialELNSMWAdapterUI::displayResults', '\\ELNSMWAdapterUI\\SpecialELNSMWAdapterUI::displayResultsPage', '\\ELNSMWAdapterUI\\SpecialELNSMWAdapterUI::getPluginInfo'],
+			'PhanUndeclaredClassMethod' => ['\\ELNSMWAdapterUI\\SpecialELNSMWAdapterUI::__construct', '\\ELNSMWAdapterUI\\SpecialELNSMWAdapterUI::callAdapterService', '\\ELNSMWAdapterUI\\SpecialELNSMWAdapterUI::checkServiceStatus', '\\ELNSMWAdapterUI\\SpecialELNSMWAdapterUI::displayProcessingPage', '\\ELNSMWAdapterUI\\SpecialELNSMWAdapterUI::displayResults', '\\ELNSMWAdapterUI\\SpecialELNSMWAdapterUI::displayResultsPage', '\\ELNSMWAdapterUI\\SpecialELNSMWAdapterUI::getPluginInfo', '\\ELNSMWAdapterUI\\SpecialELNSMWAdapterUI::isAllowedELabFTWHost'],
 			'PhanUndeclaredStaticMethod' => ['\\ELNSMWAdapterUI\\SpecialELNSMWAdapterUI::displayProcessingPage'],
 			'PhanUndeclaredTypeParameter' => ['\\ELNSMWAdapterUI\\SpecialELNSMWAdapterUI::__construct'],
 			'PhanUndeclaredTypeProperty' => ['\\ELNSMWAdapterUI\\SpecialELNSMWAdapterUI']
