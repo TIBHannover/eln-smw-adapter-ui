@@ -56,6 +56,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `getMessageCssClass()` rewritten as a `match()` expression, and the
   unknown-method fallback in `displayMethodForm()` simplified from a
   single-case `switch` to a plain early-return.
+- Remove PHPDoc blocks and tags in `SpecialELNSMWAdapterUI` that only
+  restate native type hints or method names.
 
 ### Changed
 
