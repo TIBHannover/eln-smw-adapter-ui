@@ -71,7 +71,7 @@ class AdapterServiceClientTest extends MediaWikiIntegrationTestCase {
 		$result = $this->newClient()->getJobResult( 'job-1' );
 
 		$this->assertIsObject( $result );
-		$this->assertObjectHasProperty( 'smw_pages', $result );
+		$this->assertTrue( isset( $result->smw_pages ) );
 	}
 
 	public function testGetJobResultReturnsNullWithoutResult() {
