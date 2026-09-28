@@ -121,14 +121,16 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 		$status = $this->checkServiceStatus();
 
 		// Display compact dropdown selection
-		$html = '<div class="elnsmwadapterui-form-container">';
+		$html = '<div class="elnsmwadapterui-form-container elnsmwadapterui-form">';
 
 		// Service status section
-		$html .= '<div class="elnsmwadapterui-status-section">';
+		$html .= '<div class="elnsmwadapterui-status-section elnsmwadapterui-status">';
 		$html .= '<h3>Service Status</h3>';
 		if ( $status ) {
-			$html .= '<div class="elnsmwadapterui-status-connected">';
-			$html .= '<span style="color: green;">●</span> Service is running (v' .
+			$html .= '<div class="elnsmwadapterui-status-connected elnsmwadapterui-status__message ' .
+				'elnsmwadapterui-status__message--connected">';
+			$html .= '<span class="elnsmwadapterui-status__indicator ' .
+				'elnsmwadapterui-status__indicator--connected">●</span> Service is running (v' .
 				htmlspecialchars( $status['version'] ?? 'unknown' ) . ')';
 
 			if ( isset( $status['smw_connection'] ) ) {
@@ -140,18 +142,20 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 			}
 			$html .= '</div>';
 		} else {
-			$html .= '<div class="elnsmwadapterui-status-disconnected">';
-			$html .= '<span style="color: red;">●</span> Service unavailable or not responding';
+			$html .= '<div class="elnsmwadapterui-status-disconnected elnsmwadapterui-status__message ' .
+				'elnsmwadapterui-status__message--disconnected">';
+			$html .= '<span class="elnsmwadapterui-status__indicator ' .
+				'elnsmwadapterui-status__indicator--disconnected">●</span> Service unavailable or not responding';
 			$html .= '</div>';
 		}
 		$html .= '</div>';
 
 		$html .= '<div class="elnsmwadapterui-section">';
-		$html .= '<h2 class="elnsmwadapterui-section-title">' .
+		$html .= '<h2 class="elnsmwadapterui-section-title elnsmwadapterui-section__title">' .
 			$this->msg( 'elnsmwadapterui-form-select-legend' )->escaped() . '</h2>';
 
-		$html .= '<div class="elnsmwadapterui-form-content">';
-		$html .= '<p class="elnsmwadapterui-form-description">' .
+		$html .= '<div class="elnsmwadapterui-form-content elnsmwadapterui-form__content">';
+		$html .= '<p class="elnsmwadapterui-form-description elnsmwadapterui-form__description">' .
 			$this->msg( 'elnsmwadapterui-form-eln-type-help' )->escaped() . '</p>';
 
 		$html .= Html::openElement( 'form', [
@@ -159,12 +163,12 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 			'action' => $this->getPageTitle()->getLocalURL()
 		] );
 
-		$html .= '<div class="elnsmwadapterui-form-field">';
-		$html .= '<label class="elnsmwadapterui-form-label">' .
+		$html .= '<div class="elnsmwadapterui-form-field elnsmwadapterui-form__field">';
+		$html .= '<label class="elnsmwadapterui-form-label elnsmwadapterui-form__label">' .
 			$this->msg( 'elnsmwadapterui-form-eln-type-label' )->escaped() . '</label>';
 		$html .= Html::openElement( 'select', [
 			'name' => 'eln-type',
-			'class' => 'elnsmwadapterui-form-select',
+			'class' => 'elnsmwadapterui-form-select elnsmwadapterui-form__select',
 			'required' => 'required'
 		] );
 		// Get plugins dynamically from service status
@@ -194,11 +198,11 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 		$html .= Html::closeElement( 'select' );
 		$html .= '</div>';
 
-		$html .= '<div class="elnsmwadapterui-form-actions">';
+		$html .= '<div class="elnsmwadapterui-form-actions elnsmwadapterui-form__actions">';
 		$html .= Html::element( 'input', [
 			'type' => 'submit',
 			'value' => $this->msg( 'elnsmwadapterui-form-continue' )->text(),
-			'class' => 'mw-ui-button mw-ui-progressive elnsmwadapterui-submit-button'
+			'class' => 'mw-ui-button mw-ui-progressive elnsmwadapterui-submit-button elnsmwadapterui-form__submit'
 		] );
 		$html .= '</div>';
 
@@ -263,13 +267,13 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 		// Display styled form
 		$token = $this->getUser()->getEditToken();
 
-		$html = '<div class="elnsmwadapterui-form-container">';
+		$html = '<div class="elnsmwadapterui-form-container elnsmwadapterui-form">';
 		$html .= '<div class="elnsmwadapterui-section">';
-		$html .= '<h2 class="elnsmwadapterui-section-title">' .
+		$html .= '<h2 class="elnsmwadapterui-section-title elnsmwadapterui-section__title">' .
 			$this->msg( 'elnsmwadapterui-form-legend' )->escaped() . '</h2>';
 
-		$html .= '<div class="elnsmwadapterui-form-content">';
-		$html .= '<p class="elnsmwadapterui-form-description">' .
+		$html .= '<div class="elnsmwadapterui-form-content elnsmwadapterui-form__content">';
+		$html .= '<p class="elnsmwadapterui-form-description elnsmwadapterui-form__description">' .
 			$this->msg( 'elnsmwadapterui-form-url-help' )->escaped() . '</p>';
 
 		$html .= Html::openElement( 'form', [
@@ -283,24 +287,24 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 			'value' => $token
 		] );
 
-		$html .= '<div class="elnsmwadapterui-form-field">';
-		$html .= '<label class="elnsmwadapterui-form-label">' .
+		$html .= '<div class="elnsmwadapterui-form-field elnsmwadapterui-form__field">';
+		$html .= '<label class="elnsmwadapterui-form-label elnsmwadapterui-form__label">' .
 			$this->msg( 'elnsmwadapterui-form-url-label' )->escaped() . '</label>';
 		$html .= Html::element( 'input', [
 			'type' => 'url',
 			'name' => 'eln-url',
-			'class' => 'elnsmwadapterui-form-input',
+			'class' => 'elnsmwadapterui-form-input elnsmwadapterui-form__input',
 			'placeholder' => 'https://elab.tu-clausthal.de/experiments.php?mode=view&id=0000',
 			'required' => 'required',
 			'value' => $elnUrl
 		] );
 		$html .= '</div>';
 
-		$html .= '<div class="elnsmwadapterui-form-actions">';
+		$html .= '<div class="elnsmwadapterui-form-actions elnsmwadapterui-form__actions">';
 		$html .= Html::element( 'input', [
 			'type' => 'submit',
 			'value' => $this->msg( 'elnsmwadapterui-form-submit' )->text(),
-			'class' => 'mw-ui-button mw-ui-progressive elnsmwadapterui-submit-button'
+			'class' => 'mw-ui-button mw-ui-progressive elnsmwadapterui-submit-button elnsmwadapterui-form__submit'
 		] );
 		$html .= '</div>';
 
@@ -349,19 +353,19 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 		// Display styled file upload form
 		$token = $this->getUser()->getEditToken();
 
-		$html = '<div class="elnsmwadapterui-form-container">';
+		$html = '<div class="elnsmwadapterui-form-container elnsmwadapterui-form">';
 		$html .= '<div class="elnsmwadapterui-section">';
-		$html .= '<h2 class="elnsmwadapterui-section-title">' .
+		$html .= '<h2 class="elnsmwadapterui-section-title elnsmwadapterui-section__title">' .
 			$this->msg( 'elnsmwadapterui-form-upload-legend' )->escaped() . '</h2>';
 
-		$html .= '<div class="elnsmwadapterui-form-content">';
+		$html .= '<div class="elnsmwadapterui-form-content elnsmwadapterui-form__content">';
 
 		// Show plugin information
 		$html .= '<div class="elnsmwadapterui-plugin-info">';
 		$html .= '<h3>Import method: ' . htmlspecialchars( $method ) . '</h3>';
 		$html .= '</div>';
 
-		$html .= '<p class="elnsmwadapterui-form-description">' .
+		$html .= '<p class="elnsmwadapterui-form-description elnsmwadapterui-form__description">' .
 			$this->msg( 'elnsmwadapterui-form-file-help' )->escaped() . '</p>';
 
 		$html .= Html::openElement( 'form', [
@@ -383,25 +387,26 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 		] );
 
 		// File upload field
-		$html .= '<div class="elnsmwadapterui-form-field">';
-		$html .= '<label class="elnsmwadapterui-form-label">' .
+		$html .= '<div class="elnsmwadapterui-form-field elnsmwadapterui-form__field">';
+		$html .= '<label class="elnsmwadapterui-form-label elnsmwadapterui-form__label">' .
 			$this->msg( 'elnsmwadapterui-form-file-label' )->escaped() . '</label>';
 
 		$html .= '<div class="elnsmwadapterui-file-upload">';
 		$html .= Html::element( 'input', [
 			'type' => 'file',
 			'name' => 'upload-file',
-			'class' => 'elnsmwadapterui-file-input',
+			'class' => 'elnsmwadapterui-file-input elnsmwadapterui-file-upload__input',
 			'required' => 'required'
 		] );
-		$html .= '<div class="elnsmwadapterui-file-drop-zone">';
-		$html .= '<div class="elnsmwadapterui-file-icon">📄</div>';
-		$html .= '<div class="elnsmwadapterui-file-text">' .
+		$html .= '<div class="elnsmwadapterui-file-drop-zone elnsmwadapterui-file-upload__drop-zone">';
+		$html .= '<div class="elnsmwadapterui-file-icon elnsmwadapterui-file-upload__icon">📄</div>';
+		$html .= '<div class="elnsmwadapterui-file-text elnsmwadapterui-file-upload__text">' .
 			$this->msg( 'elnsmwadapterui-file-drop-text' )->escaped() . '</div>';
 		$html .= '</div>';
-		$html .= '<div class="elnsmwadapterui-selected-file" style="display: none;">';
-		$html .= '<span class="elnsmwadapterui-file-name"></span>';
-		$html .= '<button type="button" class="elnsmwadapterui-remove-file">×</button>';
+		$html .= '<div class="elnsmwadapterui-selected-file elnsmwadapterui-file-upload__selected">';
+		$html .= '<span class="elnsmwadapterui-file-name elnsmwadapterui-file-upload__name"></span>';
+		$html .= '<button type="button" class="elnsmwadapterui-remove-file ' .
+			'elnsmwadapterui-file-upload__remove">×</button>';
 		$html .= '</div>';
 		$html .= '</div>';
 
@@ -415,11 +420,11 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 			}
 		}
 
-		$html .= '<div class="elnsmwadapterui-form-actions">';
+		$html .= '<div class="elnsmwadapterui-form-actions elnsmwadapterui-form__actions">';
 		$html .= Html::element( 'input', [
 			'type' => 'submit',
 			'value' => $this->msg( 'elnsmwadapterui-form-upload' )->text(),
-			'class' => 'mw-ui-button mw-ui-progressive elnsmwadapterui-submit-button'
+			'class' => 'mw-ui-button mw-ui-progressive elnsmwadapterui-submit-button elnsmwadapterui-form__submit'
 		] );
 		$html .= '</div>';
 
@@ -462,11 +467,11 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 	 * @return string HTML for the field
 	 */
 	private function renderDynamicField( array $field ): string {
-		$html = '<div class="elnsmwadapterui-form-field">';
-		$html .= '<label class="elnsmwadapterui-form-label">';
+		$html = '<div class="elnsmwadapterui-form-field elnsmwadapterui-form__field">';
+		$html .= '<label class="elnsmwadapterui-form-label elnsmwadapterui-form__label">';
 		$html .= htmlspecialchars( $field['label'] );
 		if ( isset( $field['required'] ) && $field['required'] ) {
-			$html .= ' <span style="color: red;">*</span>';
+			$html .= ' <span class="elnsmwadapterui-form__required">*</span>';
 		}
 		$html .= '</label>';
 
@@ -477,7 +482,7 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 			case 'select':
 				$html .= Html::openElement( 'select', [
 					'name' => $fieldName,
-					'class' => 'elnsmwadapterui-form-select',
+					'class' => 'elnsmwadapterui-form-select elnsmwadapterui-form__select',
 					'required' => $isRequired ? 'required' : null
 				] );
 
@@ -503,7 +508,7 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 				$html .= Html::element( 'input', [
 					'type' => 'text',
 					'name' => $fieldName,
-					'class' => 'elnsmwadapterui-form-input',
+					'class' => 'elnsmwadapterui-form-input elnsmwadapterui-form__input',
 					'required' => $isRequired ? 'required' : null
 				] );
 				break;
@@ -700,11 +705,13 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 
 		$html = '<div class="elnsmwadapterui-processing">';
 		$html .= '<div class="elnsmwadapterui-section">';
-		$html .= '<h2 class="elnsmwadapterui-section-title">Processing Your Import</h2>';
-		$html .= '<div class="elnsmwadapterui-processing-content">';
-		$html .= '<div class="elnsmwadapterui-spinner"></div>';
-		$html .= '<p class="elnsmwadapterui-processing-status">Please wait while your import is being processed...</p>';
-		$html .= '<p id="processing-error" class="elnsmwadapterui-processing-error"></p>';
+		$html .= '<h2 class="elnsmwadapterui-section-title elnsmwadapterui-section__title">Processing Your Import</h2>';
+		$html .= '<div class="elnsmwadapterui-processing-content elnsmwadapterui-processing__content">';
+		$html .= '<div class="elnsmwadapterui-spinner elnsmwadapterui-processing__spinner"></div>';
+		$html .= '<p class="elnsmwadapterui-processing-status ' .
+			'elnsmwadapterui-processing__status">Please wait while your import is being processed...</p>';
+		$html .= '<p id="processing-error" class="elnsmwadapterui-processing-error ' .
+			'elnsmwadapterui-processing__error"></p>';
 		$html .= '</div>';
 		$html .= '</div>';
 		$html .= '</div>';
@@ -736,23 +743,23 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 
 		// Imported Protocols Section
 		$html .= '<div class="elnsmwadapterui-section">';
-		$html .= '<h2 class="elnsmwadapterui-section-title">' .
+		$html .= '<h2 class="elnsmwadapterui-section-title elnsmwadapterui-section__title">' .
 			$this->msg( 'elnsmwadapterui-results-protocols' )->escaped() . '</h2>';
 
 		if ( isset( $result->smw_pages ) && !empty( $result->smw_pages ) ) {
 			$wikiUrl = $this->config->get( 'ELNSMWAdapterUIWikiURL' );
-			$html .= '<div class="elnsmwadapterui-protocols-list">';
+			$html .= '<div class="elnsmwadapterui-protocols-list elnsmwadapterui-protocols__list">';
 
 			$protocolCount = 0;
 			foreach ( $result->smw_pages as $pageId => $pageData ) {
 				if ( strpos( $pageId, 'P' ) === 0 ) {
 					$url = $wikiUrl . '/' . urlencode( $pageId );
-					$html .= '<div class="elnsmwadapterui-protocol-item">';
+					$html .= '<div class="elnsmwadapterui-protocol-item elnsmwadapterui-protocols__item">';
 					$html .= Html::element( 'a', [
 						'href' => $url,
 						'target' => '_blank',
 						'rel' => 'noopener noreferrer',
-						'class' => 'elnsmwadapterui-protocol-link'
+						'class' => 'elnsmwadapterui-protocol-link elnsmwadapterui-protocols__link'
 					], $pageId );
 					$html .= '</div>';
 					$protocolCount++;
@@ -760,16 +767,16 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 			}
 
 			if ( $protocolCount === 0 ) {
-				$html .= '<div class="elnsmwadapterui-no-protocols">' .
+				$html .= '<div class="elnsmwadapterui-no-protocols elnsmwadapterui-protocols__empty">' .
 					$this->msg( 'elnsmwadapterui-warning-no-protocols' )->escaped() . '</div>';
 			} else {
-				$html .= '<div class="elnsmwadapterui-protocols-summary">' .
+				$html .= '<div class="elnsmwadapterui-protocols-summary elnsmwadapterui-protocols__summary">' .
 					$this->msg( 'elnsmwadapterui-protocols-count', $protocolCount )->escaped() . '</div>';
 			}
 
 			$html .= '</div>';
 		} else {
-			$html .= '<div class="elnsmwadapterui-no-protocols">' .
+			$html .= '<div class="elnsmwadapterui-no-protocols elnsmwadapterui-protocols__empty">' .
 				$this->msg( 'elnsmwadapterui-warning-no-protocols' )->escaped() . '</div>';
 		}
 
@@ -778,7 +785,7 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 
 		// Import Log Section
 		$html .= '<div class="elnsmwadapterui-section">';
-		$html .= '<h2 class="elnsmwadapterui-section-title">' .
+		$html .= '<h2 class="elnsmwadapterui-section-title elnsmwadapterui-section__title">' .
 			$this->msg( 'elnsmwadapterui-results-log' )->escaped() . '</h2>';
 
 		if ( isset( $result->messages ) && !empty( $result->messages ) ) {
@@ -786,15 +793,19 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 
 			foreach ( $result->messages as $message ) {
 				$cssClass = $this->getMessageCssClass( $message->type );
-				$html .= '<div class="elnsmwadapterui-log-message elnsmwadapterui-log-' . $cssClass . '">';
-				$html .= '<span class="elnsmwadapterui-log-type">[' . strtoupper( $message->type ) . ']</span> ';
-				$html .= '<span class="elnsmwadapterui-log-text">' . htmlspecialchars( $message->text ) . '</span>';
+				$html .= '<div class="elnsmwadapterui-log-message elnsmwadapterui-log-' . $cssClass .
+					' elnsmwadapterui-log-message--' . $cssClass . '">';
+				$html .= '<span class="elnsmwadapterui-log-type ' .
+					'elnsmwadapterui-log-message__type">[' . strtoupper( $message->type ) . ']</span> ';
+				$html .= '<span class="elnsmwadapterui-log-text ' .
+					'elnsmwadapterui-log-message__text">' . htmlspecialchars( $message->text ) . '</span>';
 				$html .= '</div>';
 			}
 
 			$html .= '</div>';
 		} else {
-			$html .= '<div class="elnsmwadapterui-no-messages">No log messages available.</div>';
+			$html .= '<div class="elnsmwadapterui-no-messages ' .
+				'elnsmwadapterui-log-messages__empty">No log messages available.</div>';
 		}
 
 		// Close log section

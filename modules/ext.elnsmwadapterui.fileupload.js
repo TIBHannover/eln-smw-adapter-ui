@@ -3,33 +3,33 @@
 
 	function updateFileName( input ) {
 		const fileName = input.files[ 0 ] ? input.files[ 0 ].name : '';
-		const fileNameSpan = document.querySelector( '.elnsmwadapterui-file-name' );
-		const selectedFileDiv = document.querySelector( '.elnsmwadapterui-selected-file' );
-		const dropZone = document.querySelector( '.elnsmwadapterui-file-drop-zone' );
+		const fileNameSpan = document.querySelector( '.elnsmwadapterui-file-upload__name' );
+		const selectedFileDiv = document.querySelector( '.elnsmwadapterui-file-upload__selected' );
+		const dropZone = document.querySelector( '.elnsmwadapterui-file-upload__drop-zone' );
 
 		if ( fileName ) {
 			fileNameSpan.textContent = fileName;
-			selectedFileDiv.style.display = 'block';
-			dropZone.style.display = 'none';
+			selectedFileDiv.classList.add( 'elnsmwadapterui-file-upload__selected--visible' );
+			dropZone.classList.add( 'elnsmwadapterui-file-upload__drop-zone--hidden' );
 		} else {
-			selectedFileDiv.style.display = 'none';
-			dropZone.style.display = 'block';
+			selectedFileDiv.classList.remove( 'elnsmwadapterui-file-upload__selected--visible' );
+			dropZone.classList.remove( 'elnsmwadapterui-file-upload__drop-zone--hidden' );
 		}
 	}
 
 	function clearFileName() {
-		const fileInput = document.querySelector( '.elnsmwadapterui-file-input' );
-		const selectedFileDiv = document.querySelector( '.elnsmwadapterui-selected-file' );
-		const dropZone = document.querySelector( '.elnsmwadapterui-file-drop-zone' );
+		const fileInput = document.querySelector( '.elnsmwadapterui-file-upload__input' );
+		const selectedFileDiv = document.querySelector( '.elnsmwadapterui-file-upload__selected' );
+		const dropZone = document.querySelector( '.elnsmwadapterui-file-upload__drop-zone' );
 
 		fileInput.value = '';
-		selectedFileDiv.style.display = 'none';
-		dropZone.style.display = 'block';
+		selectedFileDiv.classList.remove( 'elnsmwadapterui-file-upload__selected--visible' );
+		dropZone.classList.remove( 'elnsmwadapterui-file-upload__drop-zone--hidden' );
 	}
 
 	function initDragAndDrop() {
-		const dropZone = document.querySelector( '.elnsmwadapterui-file-drop-zone' );
-		const fileInput = document.querySelector( '.elnsmwadapterui-file-input' );
+		const dropZone = document.querySelector( '.elnsmwadapterui-file-upload__drop-zone' );
+		const fileInput = document.querySelector( '.elnsmwadapterui-file-upload__input' );
 
 		if ( !dropZone || !fileInput ) {
 			return;
@@ -44,15 +44,13 @@
 
 		[ 'dragenter', 'dragover' ].forEach( ( eventName ) => {
 			dropZone.addEventListener( eventName, () => {
-				dropZone.style.backgroundColor = '#f0f8ff';
-				dropZone.style.borderColor = '#4a90e2';
+				dropZone.classList.add( 'elnsmwadapterui-file-upload__drop-zone--dragover' );
 			}, false );
 		} );
 
 		[ 'dragleave', 'drop' ].forEach( ( eventName ) => {
 			dropZone.addEventListener( eventName, () => {
-				dropZone.style.backgroundColor = '';
-				dropZone.style.borderColor = '';
+				dropZone.classList.remove( 'elnsmwadapterui-file-upload__drop-zone--dragover' );
 			}, false );
 		} );
 
@@ -67,15 +65,15 @@
 	}
 
 	document.addEventListener( 'change', ( e ) => {
-		if ( e.target.classList.contains( 'elnsmwadapterui-file-input' ) ) {
+		if ( e.target.classList.contains( 'elnsmwadapterui-file-upload__input' ) ) {
 			updateFileName( e.target );
 		}
 	} );
 
 	document.addEventListener( 'click', ( e ) => {
-		if ( e.target.closest( '.elnsmwadapterui-file-drop-zone' ) ) {
-			document.querySelector( '.elnsmwadapterui-file-input' ).click();
-		} else if ( e.target.classList.contains( 'elnsmwadapterui-remove-file' ) ) {
+		if ( e.target.closest( '.elnsmwadapterui-file-upload__drop-zone' ) ) {
+			document.querySelector( '.elnsmwadapterui-file-upload__input' ).click();
+		} else if ( e.target.classList.contains( 'elnsmwadapterui-file-upload__remove' ) ) {
 			clearFileName();
 		}
 	} );

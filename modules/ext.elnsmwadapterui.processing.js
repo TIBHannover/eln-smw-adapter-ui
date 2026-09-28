@@ -11,10 +11,10 @@
 		attempts++;
 
 		if ( attempts > maxAttempts ) {
-			document.querySelector( '.elnsmwadapterui-processing-status' ).style.display = 'none';
+			document.querySelector( '.elnsmwadapterui-processing__status' ).classList.add( 'elnsmwadapterui-processing__status--hidden' );
 			document.getElementById( 'processing-error' ).textContent =
 				'Request timed out after 3 minutes. The import may still be processing. Please check back later.';
-			document.getElementById( 'processing-error' ).style.display = 'block';
+			document.getElementById( 'processing-error' ).classList.add( 'elnsmwadapterui-processing__error--visible' );
 			return;
 		}
 
@@ -31,10 +31,10 @@
 					window.location.href = resultsBaseUrl.replace( '__JOBID__', data.id );
 				} else if ( data.status === 'failed' ) {
 					// Failed - show error
-					document.querySelector( '.elnsmwadapterui-processing-status' ).style.display = 'none';
+					document.querySelector( '.elnsmwadapterui-processing__status' ).classList.add( 'elnsmwadapterui-processing__status--hidden' );
 					document.getElementById( 'processing-error' ).textContent =
 						'Import failed: ' + ( data.error || 'Unknown error' );
-					document.getElementById( 'processing-error' ).style.display = 'block';
+					document.getElementById( 'processing-error' ).classList.add( 'elnsmwadapterui-processing__error--visible' );
 				} else {
 					// Still processing - poll again
 					setTimeout( pollJobStatus, pollInterval );

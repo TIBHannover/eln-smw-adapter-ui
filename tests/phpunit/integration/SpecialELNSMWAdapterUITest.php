@@ -310,10 +310,13 @@ class SpecialELNSMWAdapterUITest extends SpecialPageTestBase {
 
 		$this->assertStringContainsString( '>P1<', $html );
 		$this->assertStringContainsString( 'elnsmwadapterui-log-error', $html );
+		$this->assertStringContainsString( 'elnsmwadapterui-log-message--error', $html );
 		$this->assertStringContainsString( 'Something failed', $html );
 		$this->assertStringContainsString( 'elnsmwadapterui-log-warning', $html );
+		$this->assertStringContainsString( 'elnsmwadapterui-log-message--warning', $html );
 		$this->assertStringContainsString( 'Something is off', $html );
 		$this->assertStringContainsString( 'elnsmwadapterui-log-notice', $html );
+		$this->assertStringContainsString( 'elnsmwadapterui-log-message--notice', $html );
 		$this->assertStringContainsString( 'Just so you know', $html );
 	}
 

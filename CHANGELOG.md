@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Deprecated
+
+- The flat, non-BEM CSS class names emitted by `SpecialELNSMWAdapterUI`
+  (e.g. `elnsmwadapterui-form-container`, `elnsmwadapterui-form-field`,
+  `elnsmwadapterui-file-drop-zone`, `elnsmwadapterui-log-error`,
+  `elnsmwadapterui-log-warning`, `elnsmwadapterui-log-notice`,
+  `elnsmwadapterui-status-connected`) are deprecated in favour of BEM
+  names (`elnsmwadapterui-form`, `elnsmwadapterui-form__field`,
+  `elnsmwadapterui-file-upload__drop-zone`,
+  `elnsmwadapterui-log-message--error`, ...). The old names are still
+  emitted alongside the new ones so existing skin/`Common.css` rules
+  keep working, but no longer carry any styles of their own and will be
+  removed in a future release.
+
 ### Added
 
 - Set up docker-compose-ci (DCI) based GitHub Actions CI, covering
@@ -51,6 +65,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Replace all inline `style` attributes (service status indicators,
+  required-field asterisk, file upload and processing page visibility
+  toggles, drag-over highlight) with BEM classes and modifiers in
+  `modules/ext.elnsmwadapterui.css`; the JS modules now toggle
+  modifier classes instead of setting `element.style`.
 - Align `SpecialELNSMWAdapterUI` with the PHP coding standard: no
   spaces around `=` in `declare( strict_types=1 );`,
   `getMessageCssClass()` rewritten as a `match()` expression, and the
