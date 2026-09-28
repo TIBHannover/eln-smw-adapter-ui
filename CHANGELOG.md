@@ -71,6 +71,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Split `SpecialELNSMWAdapterUI` by responsibility: HTTP calls to the
+  adapter service moved into `AdapterServiceClient` (registered as the
+  service `ELNSMWAdapterUI.AdapterServiceClient`, failures reported via
+  `AdapterServiceException`) and HTML rendering into
+  `AdapterPageRenderer`. The special page keeps routing, permission and
+  file upload handling. A malformed job result or `job_id` from the
+  adapter service is now reported as an invalid response instead of
+  raising a `TypeError`; the rendered output is otherwise unchanged.
+
 - Replace raw HTML string concatenation in `SpecialELNSMWAdapterUI`
   with `TemplateParser` + Mustache templates (new `templates/`
   directory) for the selection, URL, upload, processing and results
