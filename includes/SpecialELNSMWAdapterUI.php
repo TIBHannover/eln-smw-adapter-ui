@@ -323,11 +323,13 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 	 * @param array<string, mixed> $data
 	 */
 	private function renderTemplate( string $name, array $data ): string {
-		// TemplateParser moved into a namespace after MW 1.39 (the minimum required version)
-		$class = class_exists( \MediaWiki\Html\TemplateParser::class )
-			? \MediaWiki\Html\TemplateParser::class
-			: \TemplateParser::class;
-		$parser = new $class( __DIR__ . '/../templates' );
+		// TemplateParser moved into a namespace after MW 1.39 (the minimum required version).
+		$class = class_exists( 'MediaWiki\\Html\\TemplateParser' )
+			? 'MediaWiki\\Html\\TemplateParser'
+			: 'TemplateParser';
+		// Instantiated via reflection: only one of the two classes exists per MW version, so a
+		// direct `new` would be reported by static analysis on the other one
+		$parser = ( new \ReflectionClass( $class ) )->newInstance( __DIR__ . '/../templates' );
 		return $parser->processTemplate( $name, $data );
 	}
 
