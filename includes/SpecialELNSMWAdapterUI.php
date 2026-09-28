@@ -104,9 +104,6 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 		return $isValid;
 	}
 
-	/**
-	 * Display ELN selection form (step 1)
-	 */
 	private function displaySelectionForm( OutputPage $out, WebRequest $request ): void {
 		// Check if form was submitted - HTMLForm prefixes with 'wp'
 		$elnType = $request->getVal( 'wpeln-type', '' );
@@ -219,9 +216,6 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 		$this->displayMessages( $out );
 	}
 
-	/**
-	 * Display method-specific form (step 2)
-	 */
 	private function displayMethodForm( OutputPage $out, string $method ): void {
 		if ( $method === 'url' ) {
 			$this->displayUrlForm( $out );
@@ -820,9 +814,6 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 		$out->addHTML( $html );
 	}
 
-	/**
-	 * Get CSS class for message type
-	 */
 	private function getMessageCssClass( string $type ): string {
 		return match ( $type ) {
 			'error' => 'error',
@@ -1060,9 +1051,6 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 
 	/**
 	 * Add a message to be displayed to the user
-	 * @param string $type
-	 * @param string $messageKey
-	 * @param array $params
 	 */
 	private function addMessage( string $type, string $messageKey, array $params = [] ): void {
 		$this->messages[] = [
