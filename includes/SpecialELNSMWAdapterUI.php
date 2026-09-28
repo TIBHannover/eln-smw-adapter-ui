@@ -5,7 +5,6 @@ declare( strict_types=1 );
 namespace ELNSMWAdapterUI;
 
 use Html;
-use MediaWiki\Http\HttpRequestFactory;
 use MediaWiki\Logger\LoggerFactory;
 use OutputPage;
 use Psr\Log\LoggerInterface;
@@ -32,8 +31,8 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 	/** @var LoggerInterface */
 	private $logger;
 
-	/** @var HttpRequestFactory */
-	private $httpRequestFactory;
+	/** @var AdapterServiceClient */
+	private $adapterServiceClient;
 
 	/** @var array<int, array{type: string, message: string}> */
 	private $messages = [];
@@ -44,12 +43,12 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 	 * (used on MW 1.43) rejects a global-namespace instance and vice versa, so a native type
 	 * hint here would break one of the two supported MW versions.
 	 * @param \MediaWiki\Config\ConfigFactory|\ConfigFactory $configFactory
-	 * @param HttpRequestFactory $httpRequestFactory
+	 * @param AdapterServiceClient $adapterServiceClient
 	 */
-	public function __construct( $configFactory, HttpRequestFactory $httpRequestFactory ) {
+	public function __construct( $configFactory, AdapterServiceClient $adapterServiceClient ) {
 		parent::__construct( 'ELNSMWAdapterUI', 'elnsmwadapterui-use' );
 		$this->config = $configFactory->makeConfig( 'main' );
-		$this->httpRequestFactory = $httpRequestFactory;
+		$this->adapterServiceClient = $adapterServiceClient;
 		$this->logger = LoggerFactory::getInstance( 'ELNSMWAdapterUI' );
 	}
 
@@ -117,7 +116,7 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 			return;
 		}
 
-		$status = $this->checkServiceStatus();
+		$status = $this->adapterServiceClient->getStatus();
 
 		// Get plugins dynamically from service status
 		$hasUrlPlugins = false;
@@ -171,7 +170,7 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 		}
 
 		// Check if method is an upload-type plugin
-		$status = $this->checkServiceStatus();
+		$status = $this->adapterServiceClient->getStatus();
 		if ( $status && isset( $status['plugins'][$method] ) ) {
 			$pluginInfo = $status['plugins'][$method];
 			if ( $pluginInfo['type'] === 'upload' ) {
@@ -249,7 +248,7 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 		}
 
 		// Fetch plugin info to get dynamic fields
-		$pluginInfo = $this->getPluginInfo( $method );
+		$pluginInfo = $this->adapterServiceClient->getPluginInfo( $method );
 
 		$token = $this->getUser()->getEditToken();
 
@@ -344,24 +343,9 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 			return 'Please provide a valid URL.';
 		}
 
-		$result = $this->adaptProtocols( $elnUrl );
-		if ( $result ) {
-			// Check if this is an async job
-			if ( isset( $result->is_async_job ) && $result->is_async_job === true ) {
-				// Redirect to processing page with job_id
-				$this->getOutput()->redirect(
-					$this->getPageTitle()->getLocalURL( [ 'action' => 'processing', 'job_id' => $result->job_id ] )
-				);
-				return true;
-			}
-
-			// Synchronous result - redirect to show results page
-			$this->getOutput()->redirect(
-				$this->getPageTitle()->getLocalURL( [
-					'action' => 'results',
-					'data' => base64_encode( json_encode( $result ) )
-				] )
-			);
+		$jobId = $this->adaptProtocols( $elnUrl );
+		if ( $jobId !== null ) {
+			$this->redirectToProcessing( $jobId );
 			return true;
 		}
 
@@ -430,24 +414,9 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 		}
 
 		// Process with adapter service using file path as ID
-		$result = $this->adaptProtocols( $uploadPath, $method, $dynamicFields );
-		if ( $result ) {
-			// Check if this is an async job
-			if ( isset( $result->is_async_job ) && $result->is_async_job === true ) {
-				// Redirect to processing page with job_id
-				$this->getOutput()->redirect(
-					$this->getPageTitle()->getLocalURL( [ 'action' => 'processing', 'job_id' => $result->job_id ] )
-				);
-				return true;
-			}
-
-			// Synchronous result - redirect to show results page
-			$this->getOutput()->redirect(
-				$this->getPageTitle()->getLocalURL( [
-					'action' => 'results',
-					'data' => base64_encode( json_encode( $result ) )
-				] )
-			);
+		$jobId = $this->adaptProtocols( $uploadPath, $method, $dynamicFields );
+		if ( $jobId !== null ) {
+			$this->redirectToProcessing( $jobId );
 			return true;
 		}
 
@@ -459,7 +428,7 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 	 */
 	private function getUploadDirectory(): string|false {
 		// Get upload path from service status
-		$status = $this->checkServiceStatus();
+		$status = $this->adapterServiceClient->getStatus();
 		if ( $status && isset( $status['upload_path'] ) ) {
 			return (string)$status['upload_path'];
 		}
@@ -480,13 +449,7 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 
 		if ( !empty( $jobId ) ) {
 			// Fetch result from backend via job_id
-			$serviceUrl = (string)$this->config->get( 'ELNSMWAdapterUIServiceURL' );
-			$jobUrl = rtrim( $serviceUrl, '/' ) . '/job/' . urlencode( $jobId );
-
-			$jobData = $this->httpGetJson( $jobUrl, false, 10 );
-			if ( $jobData && isset( $jobData->result ) ) {
-				$result = $jobData->result;
-			}
+			$result = $this->adapterServiceClient->getJobResult( $jobId );
 		} elseif ( !empty( $data ) ) {
 			// Old method: decode from URL parameter
 			$result = json_decode( base64_decode( $data ) );
@@ -599,10 +562,11 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 
 	/**
 	 * Process protocols from ELN URL or file path
+	 * @return string|null ID of the started job, or null on failure
 	 */
 	private function adaptProtocols(
 		string $elnUrlOrPath, string $method = 'url', array $dynamicFields = []
-	): ?stdClass {
+	): ?string {
 		if ( $method === 'url' ) {
 			// Handle URL-based processing (original logic)
 			$parsedUrl = parse_url( $elnUrlOrPath );
@@ -629,7 +593,7 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 	 */
 	private function processUploadedFile(
 		string $filePath, string $method, array $dynamicFields = []
-	): ?stdClass {
+	): ?string {
 		if ( !file_exists( $filePath ) ) {
 			$this->addMessage( 'error', 'elnsmwadapterui-error-file-not-found' );
 			return null;
@@ -646,7 +610,7 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 	 * @param array $parsedUrl
 	 * @param array $dynamicFields
 	 */
-	private function processELabFTWUrl( array $parsedUrl, array $dynamicFields = [] ): ?stdClass {
+	private function processELabFTWUrl( array $parsedUrl, array $dynamicFields = [] ): ?string {
 		if ( !isset( $parsedUrl['query'] ) ) {
 			$this->addMessage( 'error', 'elnsmwadapterui-error-missing-query' );
 			return null;
@@ -663,15 +627,13 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 	}
 
 	/**
-	 * Call the adapter service with proper error handling
+	 * Call the adapter service, recording a user-facing message on failure
 	 * @param string $eln
 	 * @param string $id
 	 * @param array $additionalData Additional data including user, dynamic fields, etc.
+	 * @return string|null ID of the started job, or null on failure
 	 */
-	private function callAdapterService( string $eln, string $id, array $additionalData = [] ): ?stdClass {
-		$serviceUrl = (string)$this->config->get( 'ELNSMWAdapterUIServiceURL' );
-		$url = rtrim( $serviceUrl, '/' ) . '/adapt-async';
-
+	private function callAdapterService( string $eln, string $id, array $additionalData = [] ): ?string {
 		// Get current user - prefer real name, fallback to username
 		$currentUser = $this->getUser();
 		$userName = $currentUser->getRealName();
@@ -679,148 +641,18 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 			$userName = $currentUser->getName();
 		}
 
-		// Build request payload
-		$payload = [
-			'eln' => $eln,
-			'id' => $id,
-			'data' => array_merge(
-				[ 'user' => $userName ],
-				$additionalData
-			)
-		];
-
-		$this->logger->info( 'Calling adapter service', [
-			'url' => $url,
-			'eln' => $eln,
-			'id' => $id
-		] );
-
-		$request = $this->httpRequestFactory->create( $url, [
-			'method' => 'POST',
-			'postData' => json_encode( $payload ),
-			'timeout' => 120,
-			'connectTimeout' => 10,
-			'sslVerifyHost' => true,
-			'sslVerifyCert' => true,
-			'followRedirects' => false,
-			'userAgent' => 'MediaWiki-ELNSMWAdapterUI/0.2.0',
-		], __METHOD__ );
-		$request->setHeader( 'Content-Type', 'application/json' );
-
-		$status = $request->execute();
-		$response = $request->getContent();
-
-		if ( !$status->isOK() ) {
-			$this->logger->error( 'HTTP error when calling adapter service', [
-				'error' => (string)$status,
-				'url' => $url
-			] );
-			$this->addMessage( 'error', 'elnsmwadapterui-error-service-offline' );
+		try {
+			return $this->adapterServiceClient->submitJob( $eln, $id, $userName, $additionalData );
+		} catch ( AdapterServiceException $e ) {
+			$this->addMessage( 'error', $e->getMessageKey(), $e->getMessageParams() );
 			return null;
 		}
-
-		$httpCode = $request->getStatus();
-		if ( $httpCode !== 200 ) {
-			$this->logger->warning( 'HTTP error from adapter service', [
-				'http_code' => $httpCode,
-				'response' => $response
-			] );
-			$this->addMessage( 'error', 'elnsmwadapterui-error-service-error', [ $httpCode ] );
-			return null;
-		}
-
-		$jobResponse = json_decode( $response );
-		if ( json_last_error() !== JSON_ERROR_NONE ) {
-			$this->logger->error( 'Invalid JSON response from adapter service', [
-				'response' => $response,
-				'json_error' => json_last_error_msg()
-			] );
-			$this->addMessage( 'error', 'elnsmwadapterui-error-invalid-response' );
-			return null;
-		}
-
-		$this->logger->info( 'Got job response', [ 'job_response' => $response ] );
-
-		// Get job ID from response
-		if ( !isset( $jobResponse->job_id ) ) {
-			$this->logger->error( 'No job_id in response', [ 'response' => $response ] );
-			$this->addMessage( 'error', 'elnsmwadapterui-error-invalid-response' );
-			return null;
-		}
-
-		$jobId = $jobResponse->job_id;
-		$this->logger->info( 'Returning job_id to client', [ 'job_id' => $jobId ] );
-
-		// Return job_id wrapped in object to distinguish from regular result
-		return (object)[
-			'job_id' => $jobId,
-			'is_async_job' => true
-		];
 	}
 
-	/**
-	 * Perform a GET request against the adapter service and decode the JSON response.
-	 * No native return type hint: json_decode() can return a scalar if the adapter
-	 * service ever responds with non-object/array JSON, which the callers of this
-	 * method are not designed to receive; that edge case should degrade gracefully
-	 * (e.g. isset() on a non-array/object silently returning false) rather than crash.
-	 * @param string $url
-	 * @param bool $associative Decode JSON objects as associative arrays instead of stdClass
-	 * @return mixed Decoded response, or null on failure
-	 */
-	private function httpGetJson( string $url, bool $associative = true, int $timeout = 5, int $connectTimeout = 3 ) {
-		$request = $this->httpRequestFactory->create( $url, [
-			'timeout' => $timeout,
-			'connectTimeout' => $connectTimeout,
-			'sslVerifyHost' => true,
-			'sslVerifyCert' => true,
-			'followRedirects' => false,
-		], __METHOD__ );
-		$request->setHeader( 'Content-Type', 'application/json' );
-
-		$status = $request->execute();
-		if ( !$status->isOK() ) {
-			$this->logger->error( 'HTTP error when calling adapter service', [
-				'error' => (string)$status,
-				'url' => $url
-			] );
-			return null;
-		}
-
-		$httpCode = $request->getStatus();
-		if ( $httpCode !== 200 ) {
-			$this->logger->warning( 'HTTP error from adapter service', [
-				'http_code' => $httpCode,
-				'url' => $url
-			] );
-			return null;
-		}
-
-		return json_decode( $request->getContent(), $associative );
-	}
-
-	/**
-	 * Check the status of the adapter service
-	 * @return array|null Status information or null if unreachable, or malformed
-	 */
-	private function checkServiceStatus(): ?array {
-		$serviceUrl = (string)$this->config->get( 'ELNSMWAdapterUIServiceURL' );
-		$statusUrl = rtrim( $serviceUrl, '/' ) . '/status';
-
-		$status = $this->httpGetJson( $statusUrl );
-		return is_array( $status ) ? $status : null;
-	}
-
-	/**
-	 * Get plugin info including dynamic form fields
-	 * @return array|null Plugin info or null if unreachable, or malformed
-	 */
-	private function getPluginInfo( string $pluginName ): ?array {
-		$serviceUrl = (string)$this->config->get( 'ELNSMWAdapterUIServiceURL' );
-		$pluginInfoUrl = rtrim( $serviceUrl, '/' ) . '/plugin-info/' . urlencode( $pluginName );
-
-		$pluginInfo = $this->httpGetJson( $pluginInfoUrl );
-		return is_array( $pluginInfo ) ? $pluginInfo : null;
+	private function redirectToProcessing( string $jobId ): void {
+		$this->getOutput()->redirect(
+			$this->getPageTitle()->getLocalURL( [ 'action' => 'processing', 'job_id' => $jobId ] )
+		);
 	}
 
 	/**

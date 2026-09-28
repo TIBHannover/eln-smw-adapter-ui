@@ -13,10 +13,13 @@
     "AutoloadNamespaces": {
         "ELNSMWAdapterUI\\": "includes/"
     },
+    "ServiceWiringFiles": [
+        "includes/ServiceWiring.php"
+    ],
     "SpecialPages": {
         "ELNSMWAdapterUI": {
             "class": "ELNSMWAdapterUI\\SpecialELNSMWAdapterUI",
-            "services": ["ConfigFactory", "HttpRequestFactory"]
+            "services": ["ConfigFactory", "ELNSMWAdapterUI.AdapterServiceClient"]
         }
     },
     "config": {
