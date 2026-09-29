@@ -15,8 +15,9 @@ wfLoadExtension("ELNSMWAdapterUI");
 
 ```php
 $wgELNSMWAdapterUIServiceURL = "http://localhost:5000";  // Backend service URL
-$wgELNSMWAdapterUIWikiURL = "https://your-wiki.com";     // Target wiki URL
-$wgELNSMWAdapterUIAllowedELabFTWHosts = [ "elab.example.org" ]; // Allowed eLabFTW hosts (default: [ "elab.tu-clausthal.de" ])
+$wgELNSMWAdapterUIWikiURL = "https://your-wiki.com/wiki"; // Base URL for links to imported pages (default: derived from $wgServer and $wgArticlePath)
+$wgELNSMWAdapterUIJobStatusPath = "/eln-smw-adapter/job/"; // Public path (relative to $wgServer) where the browser polls job status
+$wgELNSMWAdapterUIAllowedELabFTWHosts = [ "elab.example.org" ]; // Allowed eLabFTW hosts (default: none, so URL imports are rejected until set)
 ```
 
 ## Usage
@@ -27,6 +28,6 @@ $wgELNSMWAdapterUIAllowedELabFTWHosts = [ "elab.example.org" ]; // Allowed eLabF
 
 ## Requirements
 
-- MediaWiki >= 1.35.0
+- MediaWiki >= 1.39.0
 - Backend adapter service running
 - `elnsmwadapterui-use` permission for users

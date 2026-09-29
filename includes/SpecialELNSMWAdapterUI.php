@@ -390,10 +390,10 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 
 		$out->setPageTitle( 'Processing Import' );
 
-		// Use public job status URL that browser can access (via nginx proxy)
-		// Construct from $wgServer (https://service.tib.eu) + /sfb1368/eln-smw-adapter/job/
-		$server = (string)$this->config->get( 'Server' );
-		$jobStatusUrl = rtrim( $server, '/' ) . '/sfb1368/eln-smw-adapter/job/' . urlencode( $jobId );
+		// Use a public job status URL that the browser can access (e.g. via a reverse proxy)
+		$server = rtrim( (string)$this->config->get( 'Server' ), '/' );
+		$jobPath = '/' . trim( (string)$this->config->get( 'ELNSMWAdapterUIJobStatusPath' ), '/' ) . '/';
+		$jobStatusUrl = $server . $jobPath . urlencode( $jobId );
 		$resultsUrl = $this->getPageTitle()->getLocalURL( [ 'action' => 'results', 'job_id' => '__JOBID__' ] );
 
 		$out->addHTML( $this->getRenderer()->processing() );
@@ -421,9 +421,26 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 
 		$out->addHTML( $this->getRenderer()->results(
 			$result,
-			(string)$this->config->get( 'ELNSMWAdapterUIWikiURL' ),
+			$this->getWikiUrl(),
 			$this->getPageTitle()->getLocalURL()
 		) );
+	}
+
+	/**
+	 * Base URL for links to imported pages: $wgELNSMWAdapterUIWikiURL, or derived from
+	 * $wgServer and $wgArticlePath when unset.
+	 */
+	private function getWikiUrl(): string {
+		$configured = (string)$this->config->get( 'ELNSMWAdapterUIWikiURL' );
+		if ( $configured !== '' ) {
+			return rtrim( $configured, '/' );
+		}
+
+		return rtrim(
+			(string)$this->config->get( 'Server' ) .
+			str_replace( '$1', '', (string)$this->config->get( 'ArticlePath' ) ),
+			'/'
+		);
 	}
 
 	/**

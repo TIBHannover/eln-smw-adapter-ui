@@ -139,6 +139,23 @@ class SpecialELNSMWAdapterUITest extends SpecialPageTestBase {
 		$this->assertStringContainsString( 'No job ID provided.', $html );
 	}
 
+	public function testProcessingActionUsesConfiguredJobStatusPath() {
+		$this->overrideConfigValues( [
+			'Server' => 'https://wiki.example.org',
+			'ELNSMWAdapterUIJobStatusPath' => '/adapter/job/',
+		] );
+		$page = $this->newContextualizedSpecialPage(
+			new FauxRequest( [ 'action' => 'processing', 'job_id' => 'abc' ] )
+		);
+
+		$page->execute( '' );
+
+		$this->assertSame(
+			'https://wiki.example.org/adapter/job/abc',
+			$page->getOutput()->getJsConfigVars()['elnsmwadapteruiJobStatusUrl']
+		);
+	}
+
 	public function testUnknownMethodShowsUnknownMethodError() {
 		$this->installMockHttp( $this->makeFakeHttpRequest( '', 0 ) );
 
@@ -186,6 +203,15 @@ class SpecialELNSMWAdapterUITest extends SpecialPageTestBase {
 		$this->assertTrue( $result );
 	}
 
+	public function testProcessFormRejectsAllHostsByDefault() {
+		$this->overrideConfigValue( 'ELNSMWAdapterUIAllowedELabFTWHosts', [] );
+		$page = $this->newContextualizedSpecialPage( new FauxRequest( [] ) );
+
+		$result = $page->processForm( [ 'eln-url' => 'https://elab.example.org/experiments.php?mode=view&id=42' ] );
+
+		$this->assertSame( 'Failed to process the request.', $result );
+	}
+
 	public function testProcessFormRejectsDefaultHostWhenNotInConfiguredAllowedHosts() {
 		$this->overrideConfigValue( 'ELNSMWAdapterUIAllowedELabFTWHosts', [ 'elab.example.org' ] );
 		$page = $this->newContextualizedSpecialPage( new FauxRequest( [] ) );
@@ -212,10 +238,11 @@ class SpecialELNSMWAdapterUITest extends SpecialPageTestBase {
 	}
 
 	public function testProcessFormSucceedsForValidElabftwUrlAndRedirectsToProcessing() {
+		$this->overrideConfigValue( 'ELNSMWAdapterUIAllowedELabFTWHosts', [ 'elab.example.org' ] );
 		$this->installMockHttp( $this->makeFakeHttpRequest( json_encode( [ 'job_id' => 'job-123' ] ), 200 ) );
 		$page = $this->newContextualizedSpecialPage( new FauxRequest( [] ) );
 
-		$result = $page->processForm( [ 'eln-url' => 'https://elab.tu-clausthal.de/experiments.php?mode=view&id=42' ] );
+		$result = $page->processForm( [ 'eln-url' => 'https://elab.example.org/experiments.php?mode=view&id=42' ] );
 
 		$this->assertTrue( $result );
 		$this->assertStringContainsString(

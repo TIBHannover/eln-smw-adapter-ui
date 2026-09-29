@@ -1,7 +1,7 @@
 {
     "name": "ELNSMWAdapterUI",
     "author": ["Marc Hinterthaner"],
-    "url": "https://github.com/your-repo/eln-smw-adapter-ui",
+    "url": "https://github.com/TIBHannover/eln-smw-adapter-ui",
     "description": "A MediaWiki Extension to provide a user interface for the eln-smw-adapter endpoint",
     "type": "specialpage",
     "version": "1.0.0",
@@ -28,15 +28,19 @@
             "description": "URL of the ELN SMW Adapter service endpoint"
         },
         "ELNSMWAdapterUIWikiURL": {
-            "value": "https://service.tib.eu/sfb1368/wiki",
-            "description": "Base URL of the target MediaWiki instance"
+            "value": "",
+            "description": "Base URL under which imported pages are linked; when empty, derived from $wgServer and $wgArticlePath"
+        },
+        "ELNSMWAdapterUIJobStatusPath": {
+            "value": "/eln-smw-adapter/job/",
+            "description": "Public path, relative to $wgServer, under which the browser can poll the adapter service for job status (job ID is appended)"
         },
         "ELNSMWAdapterUIUploadDir": {
             "value": "/tmp/elnsmwadapterui",
             "description": "Directory for uploaded files"
         },
         "ELNSMWAdapterUIAllowedELabFTWHosts": {
-            "value": ["elab.tu-clausthal.de"],
+            "value": [],
             "description": "Host names of the eLabFTW instances from which URLs may be imported"
         }
     },
