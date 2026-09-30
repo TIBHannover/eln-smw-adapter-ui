@@ -7,18 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.1] - 2026-09-30
+
+Modernises the import forms so they look and behave like standard MediaWiki forms.
+
 ### Changed
-- Build the method selection, URL and file upload forms with `HTMLForm` (OOUI) instead of custom Mustache templates and CSS; drag-and-drop file selection now comes from the OOUI file widget, the forms get the standard framed fieldset with a legend via `setWrapperLegendMsg()`
-- Show the service status as a standard message box and the processing state with an OOUI progress bar
-- Form errors are now reported through `HTMLForm` and name the actual cause (e.g. unsupported host) instead of a generic failure message
+- Show the method selection, URL import and file upload forms as standard MediaWiki forms with a framed section and legend; file upload keeps drag and drop onto the file button [`b9fcdb8`](https://github.com/TIBHannover/eln-smw-adapter-ui/commit/b9fcdb8)
+- Show the service status as a standard message box and the import progress with a progress bar [`b9fcdb8`](https://github.com/TIBHannover/eln-smw-adapter-ui/commit/b9fcdb8)
+- Name the actual cause when a form submission fails (e.g. a host that is not allowed) instead of a generic failure message [`b9fcdb8`](https://github.com/TIBHannover/eln-smw-adapter-ui/commit/b9fcdb8)
+- Remove the custom form styles and the separate file upload script, which are no longer needed [`b9fcdb8`](https://github.com/TIBHannover/eln-smw-adapter-ui/commit/b9fcdb8)
 
 ### Fixed
-- Use i18n messages instead of hardcoded English strings on the special page, the results/processing views and in the client-side polling script
-- Avoid the MediaWiki 1.41 deprecation for passing a `Message` to `OutputPage::setPageTitle()`
-
-### Removed
-- Custom form, upload and spinner styles and the `ext.elnsmwadapterui.fileupload` module
-- Unused i18n messages of the former card layout and form legends
+- Translate all remaining English texts on the import pages, including the progress and error messages, and add the missing permission messages [`b9fcdb8`](https://github.com/TIBHannover/eln-smw-adapter-ui/commit/b9fcdb8)
+- Avoid a deprecation warning on MediaWiki 1.41 and later when setting the page title [`b9fcdb8`](https://github.com/TIBHannover/eln-smw-adapter-ui/commit/b9fcdb8)
 
 ## [2.0.0] - 2026-09-29
 
@@ -34,7 +35,8 @@ Makes the extension usable on wikis other than the SFB 1368 wiki. Existing insta
 ### Changed
 - Correct the extension URL in `extension.json` and the minimum MediaWiki version in the README [`40145b0`](https://github.com/TIBHannover/eln-smw-adapter-ui/commit/40145b0)
 
-[Unreleased]: https://github.com/TIBHannover/eln-smw-adapter-ui/compare/2.0.0...HEAD
+[Unreleased]: https://github.com/TIBHannover/eln-smw-adapter-ui/compare/2.0.1...HEAD
+[2.0.1]: https://github.com/TIBHannover/eln-smw-adapter-ui/compare/2.0.0...2.0.1
 [2.0.0]: https://github.com/TIBHannover/eln-smw-adapter-ui/compare/1.0.0...2.0.0
 
 Older releases: [1.x](CHANGELOG-1.x.md)
