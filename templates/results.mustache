@@ -1,41 +1,26 @@
 <div class="elnsmwadapterui-results">
-	<div class="elnsmwadapterui-section">
-		<h2 class="elnsmwadapterui-section-title elnsmwadapterui-section__title">{{protocolsTitle}}</h2>
-		{{#hasPages}}
-		<div class="elnsmwadapterui-protocols-list elnsmwadapterui-protocols__list">
-			{{#hasProtocols}}
-			{{#protocols}}
-			<div class="elnsmwadapterui-protocol-item elnsmwadapterui-protocols__item">
-				<a href="{{url}}" target="_blank" rel="noopener noreferrer" class="elnsmwadapterui-protocol-link elnsmwadapterui-protocols__link">{{pageId}}</a>
-			</div>
-			{{/protocols}}
-			<div class="elnsmwadapterui-protocols-summary elnsmwadapterui-protocols__summary">{{summary}}</div>
-			{{/hasProtocols}}
-			{{^hasProtocols}}
-			<div class="elnsmwadapterui-no-protocols elnsmwadapterui-protocols__empty">{{noProtocolsText}}</div>
-			{{/hasProtocols}}
-		</div>
-		{{/hasPages}}
-		{{^hasPages}}
-		<div class="elnsmwadapterui-no-protocols elnsmwadapterui-protocols__empty">{{noProtocolsText}}</div>
-		{{/hasPages}}
-	</div>
-	<div class="elnsmwadapterui-section">
-		<h2 class="elnsmwadapterui-section-title elnsmwadapterui-section__title">{{logTitle}}</h2>
-		{{#hasLogMessages}}
-		<div class="elnsmwadapterui-log-messages">
-			{{#logMessages}}
-			<div class="elnsmwadapterui-log-message elnsmwadapterui-log-{{cssClass}} elnsmwadapterui-log-message--{{cssClass}}">
-				<span class="elnsmwadapterui-log-type elnsmwadapterui-log-message__type">[{{type}}]</span> <span class="elnsmwadapterui-log-text elnsmwadapterui-log-message__text">{{text}}</span>
-			</div>
-			{{/logMessages}}
-		</div>
-		{{/hasLogMessages}}
-		{{^hasLogMessages}}
-		<div class="elnsmwadapterui-no-messages elnsmwadapterui-log-messages__empty">No log messages available.</div>
-		{{/hasLogMessages}}
-	</div>
-	<div class="elnsmwadapterui-actions">
-		<a href="{{backUrl}}" class="mw-ui-button mw-ui-progressive">{{backText}}</a>
-	</div>
+	<h2>{{protocolsTitle}}</h2>
+	{{#hasProtocols}}
+	<ul>
+		{{#protocols}}
+		<li><a href="{{url}}" target="_blank" rel="noopener noreferrer">{{pageId}}</a></li>
+		{{/protocols}}
+	</ul>
+	<p>{{summary}}</p>
+	{{/hasProtocols}}
+	{{^hasProtocols}}
+	<p>{{noProtocolsText}}</p>
+	{{/hasProtocols}}
+	<h2>{{logTitle}}</h2>
+	{{#hasLogMessages}}
+	<ul class="elnsmwadapterui-log">
+		{{#logMessages}}
+		<li class="elnsmwadapterui-log__item elnsmwadapterui-log__item--{{cssClass}}"><strong>[{{type}}]</strong> {{text}}</li>
+		{{/logMessages}}
+	</ul>
+	{{/hasLogMessages}}
+	{{^hasLogMessages}}
+	<p>{{noLogText}}</p>
+	{{/hasLogMessages}}
+	<p>{{{backButton}}}</p>
 </div>

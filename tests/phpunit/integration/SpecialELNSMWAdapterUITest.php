@@ -73,8 +73,8 @@ class SpecialELNSMWAdapterUITest extends SpecialPageTestBase {
 			$this->newAuthorizedPerformer()
 		);
 
-		$this->assertStringContainsString( '(elnsmwadapterui-form-select-legend)', $html );
-		$this->assertStringContainsString( 'Service unavailable or not responding', $html );
+		$this->assertStringContainsString( '(elnsmwadapterui-status-disconnected)', $html );
+		$this->assertStringNotContainsString( '<form', $html );
 	}
 
 	public function testDefaultViewShowsServiceStatusWhenReachable() {
@@ -97,10 +97,13 @@ class SpecialELNSMWAdapterUITest extends SpecialPageTestBase {
 			$this->newAuthorizedPerformer()
 		);
 
-		$this->assertStringContainsString( 'Service is running (v1.2.3)', $html );
-		$this->assertStringContainsString( 'SMW Connection: ok', $html );
-		$this->assertStringContainsString( 'value="url" selected', $html );
-		$this->assertStringContainsString( 'Upload file (excel-upload)', $html );
+		$this->assertStringContainsString( '(elnsmwadapterui-status-connected: 1.2.3)', $html );
+		$this->assertStringContainsString( '(elnsmwadapterui-status-smw-connection: ok)', $html );
+		$this->assertStringContainsString( '(elnsmwadapterui-form-select-legend)', $html );
+		$this->assertStringContainsString( "name='wpeln-type'", $html );
+		$this->assertStringContainsString( '(elnsmwadapterui-option-url-import)', $html );
+		$this->assertStringContainsString( '(elnsmwadapterui-option-upload: excel-upload)', $html );
+		$this->assertStringNotContainsString( '<h3', $html );
 	}
 
 	public function testMethodUrlShowsUrlImportForm() {
@@ -114,10 +117,14 @@ class SpecialELNSMWAdapterUITest extends SpecialPageTestBase {
 		);
 
 		$this->assertStringContainsString( '(elnsmwadapterui-form-legend)', $html );
-		$this->assertStringContainsString( 'name="eln-url"', $html );
+		$this->assertStringContainsString( "name='wpeln-url'", $html );
+		$this->assertStringContainsString( '(elnsmwadapterui-form-url-help)', $html );
+		$this->assertStringNotContainsString( '<h3', $html );
 	}
 
 	public function testResultsActionWithoutJobIdOrDataShowsNoResultsError() {
+		$this->setUserLang( 'qqx' );
+
 		[ $html ] = $this->executeSpecialPage(
 			'',
 			new FauxRequest( [ 'action' => 'results' ] ),
@@ -125,10 +132,12 @@ class SpecialELNSMWAdapterUITest extends SpecialPageTestBase {
 			$this->newAuthorizedPerformer()
 		);
 
-		$this->assertStringContainsString( 'No results data found.', $html );
+		$this->assertStringContainsString( '(elnsmwadapterui-error-no-results)', $html );
 	}
 
 	public function testProcessingActionWithoutJobIdShowsMissingJobIdError() {
+		$this->setUserLang( 'qqx' );
+
 		[ $html ] = $this->executeSpecialPage(
 			'',
 			new FauxRequest( [ 'action' => 'processing' ] ),
@@ -136,7 +145,7 @@ class SpecialELNSMWAdapterUITest extends SpecialPageTestBase {
 			$this->newAuthorizedPerformer()
 		);
 
-		$this->assertStringContainsString( 'No job ID provided.', $html );
+		$this->assertStringContainsString( '(elnsmwadapterui-error-no-job-id)', $html );
 	}
 
 	public function testProcessingActionUsesConfiguredJobStatusPath() {
@@ -157,6 +166,7 @@ class SpecialELNSMWAdapterUITest extends SpecialPageTestBase {
 	}
 
 	public function testUnknownMethodShowsUnknownMethodError() {
+		$this->setUserLang( 'qqx' );
 		$this->installMockHttp( $this->makeFakeHttpRequest( '', 0 ) );
 
 		[ $html ] = $this->executeSpecialPage(
@@ -166,7 +176,7 @@ class SpecialELNSMWAdapterUITest extends SpecialPageTestBase {
 			$this->newAuthorizedPerformer()
 		);
 
-		$this->assertStringContainsString( 'Unknown method: does-not-exist', $html );
+		$this->assertStringContainsString( '(elnsmwadapterui-error-unknown-method: does-not-exist)', $html );
 	}
 
 	public function testProcessFormRejectsMalformedUrl() {
@@ -174,7 +184,7 @@ class SpecialELNSMWAdapterUITest extends SpecialPageTestBase {
 
 		$result = $page->processForm( [ 'eln-url' => 'not-a-url' ] );
 
-		$this->assertSame( 'Please provide a valid URL.', $result );
+		$this->assertTrue( $result->hasMessage( 'elnsmwadapterui-error-invalid-url' ) );
 	}
 
 	public function testProcessFormRejectsEmptyUrl() {
@@ -182,7 +192,7 @@ class SpecialELNSMWAdapterUITest extends SpecialPageTestBase {
 
 		$result = $page->processForm( [] );
 
-		$this->assertSame( 'Please provide a valid URL.', $result );
+		$this->assertTrue( $result->hasMessage( 'elnsmwadapterui-error-invalid-url' ) );
 	}
 
 	public function testProcessFormRejectsUnsupportedElnHost() {
@@ -190,7 +200,7 @@ class SpecialELNSMWAdapterUITest extends SpecialPageTestBase {
 
 		$result = $page->processForm( [ 'eln-url' => 'https://unsupported-eln.example/view?id=1' ] );
 
-		$this->assertSame( 'Failed to process the request.', $result );
+		$this->assertTrue( $result->hasMessage( 'elnsmwadapterui-error-unsupported-eln' ) );
 	}
 
 	public function testProcessFormAcceptsHostFromConfiguredAllowedHosts() {
@@ -209,7 +219,7 @@ class SpecialELNSMWAdapterUITest extends SpecialPageTestBase {
 
 		$result = $page->processForm( [ 'eln-url' => 'https://elab.example.org/experiments.php?mode=view&id=42' ] );
 
-		$this->assertSame( 'Failed to process the request.', $result );
+		$this->assertTrue( $result->hasMessage( 'elnsmwadapterui-error-unsupported-eln' ) );
 	}
 
 	public function testProcessFormRejectsDefaultHostWhenNotInConfiguredAllowedHosts() {
@@ -218,23 +228,25 @@ class SpecialELNSMWAdapterUITest extends SpecialPageTestBase {
 
 		$result = $page->processForm( [ 'eln-url' => 'https://elab.tu-clausthal.de/experiments.php?mode=view&id=42' ] );
 
-		$this->assertSame( 'Failed to process the request.', $result );
+		$this->assertTrue( $result->hasMessage( 'elnsmwadapterui-error-unsupported-eln' ) );
 	}
 
 	public function testProcessFormRejectsElabftwUrlWithoutQuery() {
+		$this->overrideConfigValue( 'ELNSMWAdapterUIAllowedELabFTWHosts', [ 'elab.tu-clausthal.de' ] );
 		$page = $this->newContextualizedSpecialPage( new FauxRequest( [] ) );
 
 		$result = $page->processForm( [ 'eln-url' => 'https://elab.tu-clausthal.de/experiments.php' ] );
 
-		$this->assertSame( 'Failed to process the request.', $result );
+		$this->assertTrue( $result->hasMessage( 'elnsmwadapterui-error-missing-query' ) );
 	}
 
 	public function testProcessFormRejectsElabftwUrlWithoutId() {
+		$this->overrideConfigValue( 'ELNSMWAdapterUIAllowedELabFTWHosts', [ 'elab.tu-clausthal.de' ] );
 		$page = $this->newContextualizedSpecialPage( new FauxRequest( [] ) );
 
 		$result = $page->processForm( [ 'eln-url' => 'https://elab.tu-clausthal.de/experiments.php?mode=view' ] );
 
-		$this->assertSame( 'Failed to process the request.', $result );
+		$this->assertTrue( $result->hasMessage( 'elnsmwadapterui-error-missing-id' ) );
 	}
 
 	public function testProcessFormSucceedsForValidElabftwUrlAndRedirectsToProcessing() {
@@ -256,12 +268,13 @@ class SpecialELNSMWAdapterUITest extends SpecialPageTestBase {
 	}
 
 	public function testProcessFormReturnsServiceErrorMessageOnNon200Response() {
+		$this->overrideConfigValue( 'ELNSMWAdapterUIAllowedELabFTWHosts', [ 'elab.tu-clausthal.de' ] );
 		$this->installMockHttp( $this->makeFakeHttpRequest( 'Internal Server Error', 500 ) );
 		$page = $this->newContextualizedSpecialPage( new FauxRequest( [] ) );
 
 		$result = $page->processForm( [ 'eln-url' => 'https://elab.tu-clausthal.de/experiments.php?mode=view&id=42' ] );
 
-		$this->assertSame( 'Failed to process the request.', $result );
+		$this->assertTrue( $result->hasMessage( 'elnsmwadapterui-error-service-offline' ) );
 	}
 
 	public function testProcessFileUploadFormRejectsMissingUpload() {
@@ -269,7 +282,7 @@ class SpecialELNSMWAdapterUITest extends SpecialPageTestBase {
 
 		$result = $page->processFileUploadForm( [ 'method' => 'some-upload-plugin' ] );
 
-		$this->assertSame( 'Please select a file to upload.', $result );
+		$this->assertTrue( $result->hasMessage( 'elnsmwadapterui-error-no-file' ) );
 	}
 
 	public function testProcessFileUploadFormRejectsWhenUploadDirNotConfigured() {
@@ -280,7 +293,7 @@ class SpecialELNSMWAdapterUITest extends SpecialPageTestBase {
 		try {
 			$request = new FauxRequest( [] );
 			$request->setUploadData( [
-				'upload-file' => [
+				'wpupload-file' => [
 					'name' => 'data.xlsx',
 					'type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
 					'tmp_name' => $tempName,
@@ -292,7 +305,7 @@ class SpecialELNSMWAdapterUITest extends SpecialPageTestBase {
 
 			$result = $page->processFileUploadForm( [ 'method' => 'excel-local' ] );
 
-			$this->assertSame( 'Upload directory is not configured.', $result );
+			$this->assertTrue( $result->hasMessage( 'elnsmwadapterui-error-upload-dir' ) );
 		} finally {
 			if ( file_exists( $tempName ) ) {
 				unlink( $tempName );
@@ -326,10 +339,12 @@ class SpecialELNSMWAdapterUITest extends SpecialPageTestBase {
 		);
 
 		$this->assertStringContainsString( '(elnsmwadapterui-form-upload-legend)', $html );
-		$this->assertStringContainsString( 'name="upload-file"', $html );
-		$this->assertStringContainsString( 'name="field_project"', $html );
-		$this->assertStringContainsString( 'name="field_category"', $html );
-		$this->assertStringContainsString( '<option value="A">A</option>', $html );
+		$this->assertStringContainsString( '(elnsmwadapterui-form-file-help)', $html );
+		$this->assertStringContainsString( "name='wpupload-file'", $html );
+		$this->assertStringContainsString( "name='wpfield_project'", $html );
+		$this->assertStringContainsString( "name='wpfield_category'", $html );
+		$this->assertStringContainsString( "value='A'", $html );
+		$this->assertStringNotContainsString( '<h3', $html );
 	}
 
 	public function testResultsActionWithDataParameterRendersProtocolsAndLogMessages() {
@@ -355,14 +370,11 @@ class SpecialELNSMWAdapterUITest extends SpecialPageTestBase {
 		);
 
 		$this->assertStringContainsString( '>P1<', $html );
-		$this->assertStringContainsString( 'elnsmwadapterui-log-error', $html );
-		$this->assertStringContainsString( 'elnsmwadapterui-log-message--error', $html );
+		$this->assertStringContainsString( 'elnsmwadapterui-log__item--error', $html );
 		$this->assertStringContainsString( 'Something failed', $html );
-		$this->assertStringContainsString( 'elnsmwadapterui-log-warning', $html );
-		$this->assertStringContainsString( 'elnsmwadapterui-log-message--warning', $html );
+		$this->assertStringContainsString( 'elnsmwadapterui-log__item--warning', $html );
 		$this->assertStringContainsString( 'Something is off', $html );
-		$this->assertStringContainsString( 'elnsmwadapterui-log-notice', $html );
-		$this->assertStringContainsString( 'elnsmwadapterui-log-message--notice', $html );
+		$this->assertStringContainsString( 'elnsmwadapterui-log__item--notice', $html );
 		$this->assertStringContainsString( 'Just so you know', $html );
 	}
 
@@ -380,6 +392,6 @@ class SpecialELNSMWAdapterUITest extends SpecialPageTestBase {
 		);
 
 		$this->assertStringContainsString( '(elnsmwadapterui-warning-no-protocols)', $html );
-		$this->assertStringContainsString( 'No log messages available.', $html );
+		$this->assertStringContainsString( '(elnsmwadapterui-results-no-log)', $html );
 	}
 }

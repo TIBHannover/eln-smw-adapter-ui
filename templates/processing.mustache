@@ -1,10 +1,7 @@
 <div class="elnsmwadapterui-processing">
-	<div class="elnsmwadapterui-section">
-		<h2 class="elnsmwadapterui-section-title elnsmwadapterui-section__title">Processing Your Import</h2>
-		<div class="elnsmwadapterui-processing-content elnsmwadapterui-processing__content">
-			<div class="elnsmwadapterui-spinner elnsmwadapterui-processing__spinner"></div>
-			<p class="elnsmwadapterui-processing-status elnsmwadapterui-processing__status">Please wait while your import is being processed...</p>
-			<p id="processing-error" class="elnsmwadapterui-processing-error elnsmwadapterui-processing__error"></p>
-		</div>
+	<div class="elnsmwadapterui-processing__status">
+		{{{progressBar}}}
+		<p>{{statusText}}</p>
 	</div>
+	<div class="elnsmwadapterui-processing__error"></div>
 </div>

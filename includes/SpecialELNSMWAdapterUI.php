@@ -4,10 +4,13 @@ declare( strict_types=1 );
 
 namespace ELNSMWAdapterUI;
 
+use Html;
+use HTMLForm;
 use MediaWiki\Logger\LoggerFactory;
 use OutputPage;
 use Psr\Log\LoggerInterface;
 use SpecialPage;
+use Status;
 use stdClass;
 use WebRequest;
 
@@ -18,6 +21,8 @@ use WebRequest;
  * into MediaWiki with Semantic MediaWiki integration.
  */
 class SpecialELNSMWAdapterUI extends SpecialPage {
+
+	private const DYNAMIC_FIELD_PREFIX = 'field_';
 
 	/**
 	 * No native type hint: on MW 1.39 (the minimum version required by extension.json)
@@ -32,9 +37,6 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 
 	/** @var AdapterServiceClient */
 	private $adapterServiceClient;
-
-	/** @var array<int, array{type: string, message: string}> */
-	private $messages = [];
 
 	/** @var AdapterPageRenderer|null */
 	private $renderer;
@@ -65,7 +67,7 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 		$out = $this->getOutput();
 		$request = $this->getRequest();
 
-		// Add CSS for styling
+		$out->enableOOUI();
 		$out->addModuleStyles( 'ext.elnsmwadapterui.styles' );
 
 		// Check if we should display results or form
@@ -80,7 +82,7 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 			// Skip dropdown if method is specified
 			$this->displayMethodForm( $out, $method );
 		} else {
-			$this->displaySelectionForm( $out, $request );
+			$this->displaySelectionForm( $out );
 		}
 	}
 
@@ -105,26 +107,72 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 		return $isValid;
 	}
 
-	private function displaySelectionForm( OutputPage $out, WebRequest $request ): void {
-		// Check if form was submitted - HTMLForm prefixes with 'wp'
-		$elnType = $request->getVal( 'wpeln-type', '' );
-		if ( empty( $elnType ) ) {
-			$elnType = $request->getVal( 'eln-type', '' );
-		}
+	/**
+	 * @param array<string, array<string, mixed>> $descriptor
+	 */
+	private function newForm( array $descriptor, string $legendMessageKey, string $helpMessageKey ): HTMLForm {
+		$form = HTMLForm::factory( 'ooui', $descriptor, $this->getContext() );
+		// The wrapper legend makes HTMLForm draw the standard framed fieldset around the fields
+		$form->setWrapperLegendMsg( $legendMessageKey );
+		$form->addHeaderHtml( $this->msg( $helpMessageKey )->parseAsBlock() );
+		return $form;
+	}
 
-		if ( !empty( $elnType ) ) {
-			// Redirect to method-specific form
-			$out->redirect( $this->getPageTitle()->getLocalURL( [ 'method' => $elnType ] ) );
+	private function displaySelectionForm( OutputPage $out ): void {
+		$status = $this->adapterServiceClient->getStatus();
+		$out->addHTML( $this->getRenderer()->statusBox( $status ) );
+
+		$options = $this->getMethodOptions( $status );
+		if ( $options === [] ) {
 			return;
 		}
 
-		$out->addHTML( $this->getRenderer()->selectionForm(
-			$this->adapterServiceClient->getStatus(),
-			$this->getPageTitle()->getLocalURL()
-		) );
+		$this->newForm( [
+			'eln-type' => [
+				'type' => 'select',
+				'label-message' => 'elnsmwadapterui-form-eln-type-label',
+				'options' => $options,
+				'default' => reset( $options ),
+			],
+		], 'elnsmwadapterui-form-select-legend', 'elnsmwadapterui-form-eln-type-help' )
+			->setMethod( 'get' )
+			->setFormIdentifier( 'selection' )
+			->setSubmitTextMsg( 'elnsmwadapterui-form-continue' )
+			->setSubmitCallback( function ( array $data ) {
+				$this->getOutput()->redirect(
+					$this->getPageTitle()->getLocalURL( [ 'method' => $data['eln-type'] ] )
+				);
+				return true;
+			} )
+			->show();
+	}
 
-		// Display any messages
-		$this->displayMessages( $out );
+	/**
+	 * Import methods offered by the service, as label => value pairs for a select field
+	 * @param array<string, mixed>|null $status Service status, or null if the service is unreachable
+	 * @return array<string, string>
+	 */
+	private function getMethodOptions( ?array $status ): array {
+		$hasUrlPlugins = false;
+		$uploadPlugins = [];
+
+		foreach ( $status['plugins'] ?? [] as $pluginName => $pluginInfo ) {
+			if ( $pluginInfo['type'] === 'url' ) {
+				$hasUrlPlugins = true;
+			} elseif ( $pluginInfo['type'] === 'upload' ) {
+				$uploadPlugins[] = (string)$pluginName;
+			}
+		}
+
+		$options = [];
+		if ( $hasUrlPlugins ) {
+			$options[$this->msg( 'elnsmwadapterui-option-url-import' )->text()] = 'url';
+		}
+		foreach ( $uploadPlugins as $pluginName ) {
+			$options[$this->msg( 'elnsmwadapterui-option-upload', $pluginName )->text()] = $pluginName;
+		}
+
+		return $options;
 	}
 
 	private function displayMethodForm( OutputPage $out, string $method ): void {
@@ -144,98 +192,83 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 		}
 
 		// Fallback for unknown methods
-		$out->addHTML( $this->getRenderer()->errorBox( 'Unknown method: ' . $method ) );
+		$out->addHTML( $this->getRenderer()->errorBox(
+			$this->msg( 'elnsmwadapterui-error-unknown-method', $method )->text()
+		) );
 	}
 
-	/**
-	 * Display URL form (original form)
-	 */
-	private function displayUrlForm( OutputPage $out, string $elnUrl = '' ): void {
-		$request = $this->getRequest();
+	private function displayUrlForm( OutputPage $out ): void {
+		$this->newForm( [
+			'eln-url' => [
+				'type' => 'url',
+				'label-message' => 'elnsmwadapterui-form-url-label',
+				'placeholder-message' => 'elnsmwadapterui-form-url-placeholder',
+				'required' => true,
+			],
+		], 'elnsmwadapterui-form-legend', 'elnsmwadapterui-form-url-help' )
+			->setAction( $this->getPageTitle()->getLocalURL( [ 'method' => 'url' ] ) )
+			->setSubmitTextMsg( 'elnsmwadapterui-form-submit' )
+			->setSubmitCallback( [ $this, 'processForm' ] )
+			->show();
 
-		// Handle form submission
-		if ( $request->wasPosted() ) {
-			if ( !$this->getUser()->matchEditToken( $request->getVal( 'wpEditToken' ) ) ) {
-				$out->addHTML( $this->getRenderer()->errorBox( 'Invalid form submission. Please try again.' ) );
-			} else {
-				$urlValue = $request->getVal( 'eln-url', '' );
-				$result = $this->processForm( [ 'eln-url' => $urlValue ] );
-				if ( $result !== true && is_string( $result ) ) {
-					$out->addHTML( $this->getRenderer()->errorBox( $result ) );
-				} elseif ( $result === true ) {
-					// Redirect happened in processForm
-					return;
-				}
-				// Keep the entered value
-				$elnUrl = (string)$urlValue;
-			}
-		}
-
-		$out->addHTML( $this->getRenderer()->urlForm(
-			$this->getPageTitle()->getLocalURL( [ 'method' => 'url' ] ),
-			$this->getUser()->getEditToken(),
-			$elnUrl
-		) );
-
-		// Display any messages
-		$this->displayMessages( $out );
-
-		// Add back button
 		$this->addBackToSelectionButton( $out );
 	}
 
-	/**
-	 * Display file upload form
-	 */
 	private function displayFileUploadForm( OutputPage $out, string $method ): void {
-		$request = $this->getRequest();
+		$descriptor = [
+			'upload-file' => [
+				'type' => 'file',
+				'label-message' => 'elnsmwadapterui-form-file-label',
+				'required' => true,
+			],
+		];
 
-		// Handle form submission first
-		if ( $request->wasPosted() && $request->getVal( 'wpmethod' ) === $method ) {
-			if ( !$this->getUser()->matchEditToken( $request->getVal( 'wpEditToken' ) ) ) {
-				$out->addHTML( $this->getRenderer()->errorBox( 'Invalid form submission. Please try again.' ) );
-				return;
-			}
-
-			$result = $this->processFileUploadForm( [ 'method' => $method ] );
-			if ( $result !== true && is_string( $result ) ) {
-				$out->addHTML( $this->getRenderer()->errorBox( $result ) );
-			} elseif ( $result === true ) {
-				// Redirect happened in processFileUploadForm
-				return;
-			}
-		}
-
-		// Fetch plugin info to get dynamic fields
+		// Additional fields as reported by the adapter service for this plugin
 		$pluginInfo = $this->adapterServiceClient->getPluginInfo( $method );
-
-		$fields = [];
-		if ( $pluginInfo && isset( $pluginInfo['fields'] ) && is_array( $pluginInfo['fields'] ) ) {
-			$fields = $pluginInfo['fields'];
+		foreach ( $pluginInfo['fields'] ?? [] as $field ) {
+			if ( is_array( $field ) && isset( $field['name'] ) ) {
+				$descriptor[self::DYNAMIC_FIELD_PREFIX . $field['name']] = $this->getDynamicFieldDescriptor( $field );
+			}
 		}
 
-		$out->addHTML( $this->getRenderer()->uploadForm(
-			$method,
-			$this->getPageTitle()->getLocalURL( [ 'method' => $method ] ),
-			$this->getUser()->getEditToken(),
-			$fields
-		) );
+		$this->newForm( $descriptor, 'elnsmwadapterui-form-upload-legend', 'elnsmwadapterui-form-file-help' )
+			->setAction( $this->getPageTitle()->getLocalURL( [ 'method' => $method ] ) )
+			->setSubmitTextMsg( 'elnsmwadapterui-form-upload' )
+			->setSubmitCallback( fn ( array $data ) => $this->processFileUploadForm( $data + [ 'method' => $method ] ) )
+			->show();
 
-		// Add JavaScript for file name display and drag-and-drop
-		$out->addModules( 'ext.elnsmwadapterui.fileupload' );
-
-		// Display any messages
-		$this->displayMessages( $out );
-
-		// Add back button
 		$this->addBackToSelectionButton( $out );
 	}
 
 	/**
-	 * Add back to selection button
+	 * HTMLForm field descriptor for a field reported by the adapter service
+	 * @param array{name: string, label?: string, type?: string, required?: bool, options?: string[]} $field
+	 * @return array<string, mixed>
 	 */
+	private function getDynamicFieldDescriptor( array $field ): array {
+		$descriptor = [
+			'label' => (string)( $field['label'] ?? $field['name'] ),
+			'required' => !empty( $field['required'] ),
+		];
+
+		if ( ( $field['type'] ?? '' ) === 'select' ) {
+			$options = array_map( 'strval', array_values( (array)( $field['options'] ?? [] ) ) );
+			$descriptor['type'] = 'select';
+			$descriptor['options'] = [
+				$this->msg( 'elnsmwadapterui-form-select-placeholder' )->text() => '',
+			] + array_combine( $options, $options );
+			$descriptor['default'] = '';
+		} else {
+			$descriptor['type'] = 'text';
+		}
+
+		return $descriptor;
+	}
+
 	private function addBackToSelectionButton( OutputPage $out ): void {
-		$out->addHTML( $this->getRenderer()->backToSelectionButton( $this->getPageTitle()->getLocalURL() ) );
+		$out->addHTML( Html::rawElement( 'p', [], $this->getRenderer()->backToSelectionButton(
+			$this->getPageTitle()->getLocalURL()
+		) ) );
 	}
 
 	/**
@@ -248,38 +281,33 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 	}
 
 	/**
-	 * Process URL form submission callback
+	 * Submit callback of the URL form
 	 * @param array $data Expected key: 'eln-url' (string)
+	 * @return bool|Status True after redirecting to the processing page, else a fatal Status
 	 */
-	public function processForm( array $data ): bool|string {
+	public function processForm( array $data ): bool|Status {
 		$elnUrl = isset( $data['eln-url'] ) ? (string)$data['eln-url'] : '';
 
 		if ( !$this->isValidUrl( $elnUrl ) ) {
-			return 'Please provide a valid URL.';
+			return Status::newFatal( 'elnsmwadapterui-error-invalid-url' );
 		}
 
-		$jobId = $this->adaptProtocols( $elnUrl );
-		if ( $jobId !== null ) {
-			$this->redirectToProcessing( $jobId );
-			return true;
-		}
-
-		return 'Failed to process the request.';
+		return $this->redirectIfStarted( $this->adaptProtocols( $elnUrl ) );
 	}
 
 	/**
-	 * Process file upload form submission
-	 * @param array $data Expected key: 'method' (string)
+	 * Submit callback of the file upload form
+	 * @param array $data Expected keys: 'method' (string), 'field_*' (plugin specific fields)
+	 * @return bool|Status True after redirecting to the processing page, else a fatal Status
 	 */
-	public function processFileUploadForm( array $data ): bool|string {
+	public function processFileUploadForm( array $data ): bool|Status {
 		$method = isset( $data['method'] ) ? (string)$data['method'] : '';
 
-		// Handle file upload
-		$request = $this->getRequest();
-		$uploadedFile = $request->getUpload( 'upload-file' );
+		// Handle file upload; the HTMLForm file field is named 'wpupload-file'
+		$uploadedFile = $this->getRequest()->getUpload( 'wpupload-file' );
 
-		if ( !$uploadedFile || !$uploadedFile->exists() ) {
-			return 'Please select a file to upload.';
+		if ( !$uploadedFile->exists() ) {
+			return Status::newFatal( 'elnsmwadapterui-error-no-file' );
 		}
 
 		// Get file info
@@ -289,7 +317,7 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 		// Create upload directory if it doesn't exist
 		$uploadDir = $this->getUploadDirectory();
 		if ( !$uploadDir ) {
-			return 'Upload directory is not configured.';
+			return Status::newFatal( 'elnsmwadapterui-error-upload-dir' );
 		}
 
 		// Use original filename and delete existing file if it exists
@@ -298,7 +326,7 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 		// Delete existing file if it exists
 		if ( file_exists( $uploadPath ) ) {
 			if ( !unlink( $uploadPath ) ) {
-				return 'Failed to remove existing file with the same name.';
+				return Status::newFatal( 'elnsmwadapterui-error-remove-existing' );
 			}
 			$this->logger->info( 'Existing file deleted before upload', [
 				'file_path' => $uploadPath
@@ -308,7 +336,7 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 		// Move uploaded file from temp location
 		$tempPath = $uploadedFile->getTempName();
 		if ( !$tempPath || !move_uploaded_file( $tempPath, $uploadPath ) ) {
-			return 'Failed to save uploaded file.';
+			return Status::newFatal( 'elnsmwadapterui-error-save-upload' );
 		}
 
 		$this->logger->info( 'File uploaded successfully', [
@@ -320,22 +348,14 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 
 		// Collect dynamic field values
 		$dynamicFields = [];
-		foreach ( $request->getValues() as $key => $value ) {
-			if ( strpos( $key, 'field_' ) === 0 ) {
-				// Remove 'field_' prefix
-				$fieldName = substr( $key, 6 );
-				$dynamicFields[$fieldName] = $value;
+		foreach ( $data as $key => $value ) {
+			if ( str_starts_with( $key, self::DYNAMIC_FIELD_PREFIX ) ) {
+				$dynamicFields[substr( $key, strlen( self::DYNAMIC_FIELD_PREFIX ) )] = $value;
 			}
 		}
 
 		// Process with adapter service using file path as ID
-		$jobId = $this->adaptProtocols( $uploadPath, $method, $dynamicFields );
-		if ( $jobId !== null ) {
-			$this->redirectToProcessing( $jobId );
-			return true;
-		}
-
-		return 'Failed to process the uploaded file.';
+		return $this->redirectIfStarted( $this->adaptProtocols( $uploadPath, $method, $dynamicFields ) );
 	}
 
 	/**
@@ -371,7 +391,7 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 		}
 
 		if ( !$result ) {
-			$out->addHTML( $this->getRenderer()->errorBox( 'No results data found.' ) );
+			$out->addHTML( $this->getRenderer()->errorBox( $this->msg( 'elnsmwadapterui-error-no-results' )->text() ) );
 			return;
 		}
 
@@ -384,11 +404,11 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 	private function displayProcessingPage( OutputPage $out, WebRequest $request ): void {
 		$jobId = $request->getVal( 'job_id', '' );
 		if ( empty( $jobId ) ) {
-			$out->addHTML( $this->getRenderer()->errorBox( 'No job ID provided.' ) );
+			$out->addHTML( $this->getRenderer()->errorBox( $this->msg( 'elnsmwadapterui-error-no-job-id' )->text() ) );
 			return;
 		}
 
-		$out->setPageTitle( 'Processing Import' );
+		$out->setPageTitle( $this->msg( 'elnsmwadapterui-processing-title' )->text() );
 
 		// Use a public job status URL that the browser can access (e.g. via a reverse proxy)
 		$server = rtrim( (string)$this->config->get( 'Server' ), '/' );
@@ -408,16 +428,8 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 	/**
 	 * Display results after processing
 	 */
-	private function displayResults( OutputPage $out, ?stdClass $result ): void {
-		if ( !$result ) {
-			$out->addHTML( $this->getRenderer()->errorBox(
-				$this->msg( 'elnsmwadapterui-error-service-offline' )->text()
-			) );
-			return;
-		}
-
-		// Page header
-		$out->setPageTitle( $this->msg( 'elnsmwadapterui-results-title' ) );
+	private function displayResults( OutputPage $out, stdClass $result ): void {
+		$out->setPageTitle( $this->msg( 'elnsmwadapterui-results-title' )->text() );
 
 		$out->addHTML( $this->getRenderer()->results(
 			$result,
@@ -457,30 +469,28 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 
 	/**
 	 * Process protocols from ELN URL or file path
-	 * @return string|null ID of the started job, or null on failure
+	 * @return Status Good Status whose value is the ID of the started job, or a fatal Status
 	 */
 	private function adaptProtocols(
 		string $elnUrlOrPath, string $method = 'url', array $dynamicFields = []
-	): ?string {
+	): Status {
 		if ( $method === 'url' ) {
 			// Handle URL-based processing (original logic)
 			$parsedUrl = parse_url( $elnUrlOrPath );
 
 			if ( !isset( $parsedUrl['host'] ) ) {
-				$this->addMessage( 'error', 'elnsmwadapterui-error-invalid-url' );
-				return null;
+				return Status::newFatal( 'elnsmwadapterui-error-invalid-url' );
 			}
 
 			if ( !$this->isAllowedELabFTWHost( $parsedUrl['host'] ) ) {
-				$this->addMessage( 'error', 'elnsmwadapterui-error-unsupported-eln', [ $parsedUrl['host'] ] );
-				return null;
+				return Status::newFatal( 'elnsmwadapterui-error-unsupported-eln', $parsedUrl['host'] );
 			}
 
 			return $this->processELabFTWUrl( $parsedUrl, $dynamicFields );
-		} else {
-			// Handle file-based processing
-			return $this->processUploadedFile( $elnUrlOrPath, $method, $dynamicFields );
 		}
+
+		// Handle file-based processing
+		return $this->processUploadedFile( $elnUrlOrPath, $method, $dynamicFields );
 	}
 
 	/**
@@ -488,10 +498,9 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 	 */
 	private function processUploadedFile(
 		string $filePath, string $method, array $dynamicFields = []
-	): ?string {
+	): Status {
 		if ( !file_exists( $filePath ) ) {
-			$this->addMessage( 'error', 'elnsmwadapterui-error-file-not-found' );
-			return null;
+			return Status::newFatal( 'elnsmwadapterui-error-file-not-found' );
 		}
 
 		// Use method name directly as plugin name
@@ -505,30 +514,28 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 	 * @param array $parsedUrl
 	 * @param array $dynamicFields
 	 */
-	private function processELabFTWUrl( array $parsedUrl, array $dynamicFields = [] ): ?string {
+	private function processELabFTWUrl( array $parsedUrl, array $dynamicFields = [] ): Status {
 		if ( !isset( $parsedUrl['query'] ) ) {
-			$this->addMessage( 'error', 'elnsmwadapterui-error-missing-query' );
-			return null;
+			return Status::newFatal( 'elnsmwadapterui-error-missing-query' );
 		}
 
 		parse_str( $parsedUrl['query'], $query );
 
 		if ( !isset( $query['id'] ) ) {
-			$this->addMessage( 'error', 'elnsmwadapterui-error-missing-id' );
-			return null;
+			return Status::newFatal( 'elnsmwadapterui-error-missing-id' );
 		}
 
 		return $this->callAdapterService( 'eLabFTW', (string)$query['id'], $dynamicFields );
 	}
 
 	/**
-	 * Call the adapter service, recording a user-facing message on failure
+	 * Call the adapter service
 	 * @param string $eln
 	 * @param string $id
 	 * @param array $additionalData Additional data including user, dynamic fields, etc.
-	 * @return string|null ID of the started job, or null on failure
+	 * @return Status Good Status whose value is the ID of the started job, or a fatal Status
 	 */
-	private function callAdapterService( string $eln, string $id, array $additionalData = [] ): ?string {
+	private function callAdapterService( string $eln, string $id, array $additionalData = [] ): Status {
 		// Get current user - prefer real name, fallback to username
 		$currentUser = $this->getUser();
 		$userName = $currentUser->getRealName();
@@ -537,34 +544,28 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 		}
 
 		try {
-			return $this->adapterServiceClient->submitJob( $eln, $id, $userName, $additionalData );
+			return Status::newGood(
+				$this->adapterServiceClient->submitJob( $eln, $id, $userName, $additionalData )
+			);
 		} catch ( AdapterServiceException $e ) {
-			$this->addMessage( 'error', $e->getMessageKey(), $e->getMessageParams() );
-			return null;
+			return Status::newFatal( $e->getMessageKey(), ...$e->getMessageParams() );
 		}
 	}
 
-	private function redirectToProcessing( string $jobId ): void {
+	/**
+	 * Redirect to the processing page of the started job
+	 * @param Status $jobStatus Result of adaptProtocols()
+	 * @return bool|Status True after redirecting, else the fatal Status
+	 */
+	private function redirectIfStarted( Status $jobStatus ): bool|Status {
+		if ( !$jobStatus->isOK() ) {
+			return $jobStatus;
+		}
+
 		$this->getOutput()->redirect(
-			$this->getPageTitle()->getLocalURL( [ 'action' => 'processing', 'job_id' => $jobId ] )
+			$this->getPageTitle()->getLocalURL( [ 'action' => 'processing', 'job_id' => $jobStatus->getValue() ] )
 		);
-	}
-
-	/**
-	 * Add a message to be displayed to the user
-	 */
-	private function addMessage( string $type, string $messageKey, array $params = [] ): void {
-		$this->messages[] = [
-			'type' => $type,
-			'message' => $this->msg( $messageKey, $params )->text()
-		];
-	}
-
-	/**
-	 * Display accumulated messages
-	 */
-	private function displayMessages( OutputPage $out ): void {
-		$out->addHTML( $this->getRenderer()->messageBoxes( $this->messages ) );
+		return true;
 	}
 
 	/**

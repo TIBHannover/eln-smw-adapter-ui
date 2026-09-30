@@ -7,14 +7,19 @@
 	const maxAttempts = 180; // Max 180 seconds
 	let attempts = 0;
 
+	function showError( text ) {
+		const box = document.createElement( 'div' );
+		box.className = 'mw-message-box mw-message-box-error';
+		box.textContent = text;
+		document.querySelector( '.elnsmwadapterui-processing__status' ).hidden = true;
+		document.querySelector( '.elnsmwadapterui-processing__error' ).appendChild( box );
+	}
+
 	function pollJobStatus() {
 		attempts++;
 
 		if ( attempts > maxAttempts ) {
-			document.querySelector( '.elnsmwadapterui-processing__status' ).classList.add( 'elnsmwadapterui-processing__status--hidden' );
-			document.getElementById( 'processing-error' ).textContent =
-				'Request timed out after 3 minutes. The import may still be processing. Please check back later.';
-			document.getElementById( 'processing-error' ).classList.add( 'elnsmwadapterui-processing__error--visible' );
+			showError( mw.msg( 'elnsmwadapterui-processing-timeout' ) );
 			return;
 		}
 
@@ -30,11 +35,9 @@
 					// Success - redirect to results page with job_id
 					window.location.href = resultsBaseUrl.replace( '__JOBID__', data.id );
 				} else if ( data.status === 'failed' ) {
-					// Failed - show error
-					document.querySelector( '.elnsmwadapterui-processing__status' ).classList.add( 'elnsmwadapterui-processing__status--hidden' );
-					document.getElementById( 'processing-error' ).textContent =
-						'Import failed: ' + ( data.error || 'Unknown error' );
-					document.getElementById( 'processing-error' ).classList.add( 'elnsmwadapterui-processing__error--visible' );
+					showError( data.error ?
+						mw.msg( 'elnsmwadapterui-processing-failed', data.error ) :
+						mw.msg( 'elnsmwadapterui-processing-failed-unknown' ) );
 				} else {
 					// Still processing - poll again
 					setTimeout( pollJobStatus, pollInterval );

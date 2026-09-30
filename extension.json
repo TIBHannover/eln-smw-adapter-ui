@@ -61,14 +61,14 @@
                 "modules/ext.elnsmwadapterui.css"
             ]
         },
-        "ext.elnsmwadapterui.fileupload": {
-            "scripts": [
-                "modules/ext.elnsmwadapterui.fileupload.js"
-            ]
-        },
         "ext.elnsmwadapterui.processing": {
             "scripts": [
                 "modules/ext.elnsmwadapterui.processing.js"
+            ],
+            "messages": [
+                "elnsmwadapterui-processing-timeout",
+                "elnsmwadapterui-processing-failed",
+                "elnsmwadapterui-processing-failed-unknown"
             ]
         }
     },

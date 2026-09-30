@@ -6,11 +6,14 @@ namespace ELNSMWAdapterUI;
 
 use Html;
 use MessageLocalizer;
+use OOUI\ButtonWidget;
+use OOUI\ProgressBarWidget;
 use ReflectionClass;
 use stdClass;
 
 /**
- * Renders the HTML of the individual special page states (forms, processing, results).
+ * Renders the non-form HTML of the special page (service status, processing, results).
+ * The input forms themselves are built with HTMLForm in the special page.
  */
 class AdapterPageRenderer {
 
@@ -22,100 +25,38 @@ class AdapterPageRenderer {
 
 	/**
 	 * @param array<string, mixed>|null $status Service status, or null if the service is unreachable
-	 * @param string $actionUrl
 	 */
-	public function selectionForm( ?array $status, string $actionUrl ): string {
-		// Get plugins dynamically from service status
-		$hasUrlPlugins = false;
-		$uploadPlugins = [];
-
-		if ( $status && isset( $status['plugins'] ) ) {
-			foreach ( $status['plugins'] as $pluginName => $pluginInfo ) {
-				if ( $pluginInfo['type'] === 'url' ) {
-					$hasUrlPlugins = true;
-				} elseif ( $pluginInfo['type'] === 'upload' ) {
-					$uploadPlugins[] = $pluginName;
-				}
-			}
+	public function statusBox( ?array $status ): string {
+		if ( !$status ) {
+			return Html::errorBox( $this->messages->msg( 'elnsmwadapterui-status-disconnected' )->escaped() );
 		}
 
-		$options = [];
-		// Add URL option if there are URL-based plugins (preselected)
-		if ( $hasUrlPlugins ) {
-			$options[] = [ 'value' => 'url', 'text' => 'URL (default)', 'selected' => true ];
+		$lines = [ $this->status( 'connected', (string)( $status['version'] ?? '?' ) ) ];
+		if ( isset( $status['smw_connection'] ) ) {
+			$lines[] = $this->status( 'smw-connection', (string)$status['smw_connection'] );
 		}
-		// Add upload options for each upload plugin
-		foreach ( $uploadPlugins as $pluginName ) {
-			$options[] = [ 'value' => $pluginName, 'text' => 'Upload file (' . $pluginName . ')', 'selected' => false ];
+		if ( isset( $status['enabled_plugins'] ) && is_array( $status['enabled_plugins'] ) ) {
+			$lines[] = $this->status( 'plugins', implode( ', ', $status['enabled_plugins'] ) );
 		}
 
-		$hasEnabledPlugins = $status && isset( $status['enabled_plugins'] ) && is_array( $status['enabled_plugins'] );
-
-		return $this->renderTemplate( 'selection-form', [
-			'connected' => (bool)$status,
-			'version' => (string)( $status['version'] ?? 'unknown' ),
-			'hasSmwConnection' => $status && isset( $status['smw_connection'] ),
-			'smwConnection' => (string)( $status['smw_connection'] ?? '' ),
-			'hasEnabledPlugins' => $hasEnabledPlugins,
-			'enabledPlugins' => $hasEnabledPlugins ? implode( ', ', $status['enabled_plugins'] ) : '',
-			'legend' => $this->messages->msg( 'elnsmwadapterui-form-select-legend' )->text(),
-			'help' => $this->messages->msg( 'elnsmwadapterui-form-eln-type-help' )->text(),
-			'action' => $actionUrl,
-			'label' => $this->messages->msg( 'elnsmwadapterui-form-eln-type-label' )->text(),
-			'options' => $options,
-			'submitLabel' => $this->messages->msg( 'elnsmwadapterui-form-continue' )->text(),
-		] );
-	}
-
-	public function urlForm( string $actionUrl, string $token, string $elnUrl ): string {
-		return $this->renderTemplate( 'url-form', [
-			'legend' => $this->messages->msg( 'elnsmwadapterui-form-legend' )->text(),
-			'help' => $this->messages->msg( 'elnsmwadapterui-form-url-help' )->text(),
-			'action' => $actionUrl,
-			'token' => $token,
-			'label' => $this->messages->msg( 'elnsmwadapterui-form-url-label' )->text(),
-			'placeholder' => 'https://elab.tu-clausthal.de/experiments.php?mode=view&id=0000',
-			'elnUrl' => $elnUrl,
-			'submitLabel' => $this->messages->msg( 'elnsmwadapterui-form-submit' )->text(),
-		] );
-	}
-
-	/**
-	 * @param string $method
-	 * @param string $actionUrl
-	 * @param string $token
-	 * @param array<int, array{name: string, label: string, type: string, required?: bool, options?: string[]}> $fields
-	 *   Field metadata as reported by the adapter service
-	 */
-	public function uploadForm( string $method, string $actionUrl, string $token, array $fields ): string {
-		return $this->renderTemplate( 'upload-form', [
-			'legend' => $this->messages->msg( 'elnsmwadapterui-form-upload-legend' )->text(),
-			'method' => $method,
-			'help' => $this->messages->msg( 'elnsmwadapterui-form-file-help' )->text(),
-			'action' => $actionUrl,
-			'token' => $token,
-			'label' => $this->messages->msg( 'elnsmwadapterui-form-file-label' )->text(),
-			'dropText' => $this->messages->msg( 'elnsmwadapterui-file-drop-text' )->text(),
-			'fields' => array_map( [ $this, 'getDynamicFieldData' ], $fields ),
-			'submitLabel' => $this->messages->msg( 'elnsmwadapterui-form-upload' )->text(),
-		] );
+		return Html::successBox( implode( '<br>', $lines ) );
 	}
 
 	public function processing(): string {
-		return $this->renderTemplate( 'processing', [] );
+		return $this->renderTemplate( 'processing', [
+			'progressBar' => (string)new ProgressBarWidget( [ 'progress' => false ] ),
+			'statusText' => $this->messages->msg( 'elnsmwadapterui-processing-status' )->text(),
+		] );
 	}
 
 	public function results( stdClass $result, string $wikiUrl, string $backUrl ): string {
 		$protocols = [];
-		$hasPages = isset( $result->smw_pages ) && !empty( $result->smw_pages );
-		if ( $hasPages ) {
-			foreach ( $result->smw_pages as $pageId => $pageData ) {
-				if ( strpos( (string)$pageId, 'P' ) === 0 ) {
-					$protocols[] = [
-						'url' => $wikiUrl . '/' . urlencode( (string)$pageId ),
-						'pageId' => (string)$pageId,
-					];
-				}
+		foreach ( $result->smw_pages ?? [] as $pageId => $pageData ) {
+			if ( strpos( (string)$pageId, 'P' ) === 0 ) {
+				$protocols[] = [
+					'url' => $wikiUrl . '/' . urlencode( (string)$pageId ),
+					'pageId' => (string)$pageId,
+				];
 			}
 		}
 
@@ -130,7 +71,6 @@ class AdapterPageRenderer {
 
 		return $this->renderTemplate( 'results', [
 			'protocolsTitle' => $this->messages->msg( 'elnsmwadapterui-results-protocols' )->text(),
-			'hasPages' => $hasPages,
 			'hasProtocols' => $protocols !== [],
 			'protocols' => $protocols,
 			'summary' => $this->messages->msg( 'elnsmwadapterui-protocols-count', count( $protocols ) )->text(),
@@ -138,8 +78,8 @@ class AdapterPageRenderer {
 			'logTitle' => $this->messages->msg( 'elnsmwadapterui-results-log' )->text(),
 			'hasLogMessages' => $logMessages !== [],
 			'logMessages' => $logMessages,
-			'backUrl' => $backUrl,
-			'backText' => $this->messages->msg( 'elnsmwadapterui-back-button' )->text(),
+			'noLogText' => $this->messages->msg( 'elnsmwadapterui-results-no-log' )->text(),
+			'backButton' => $this->button( $backUrl, 'elnsmwadapterui-back-button', [ 'progressive', 'primary' ] ),
 		] );
 	}
 
@@ -147,47 +87,28 @@ class AdapterPageRenderer {
 	 * @param string $text Plain text, will be escaped
 	 */
 	public function errorBox( string $text ): string {
-		return Html::element( 'div', [ 'class' => 'errorbox' ], $text );
+		return Html::errorBox( htmlspecialchars( $text ) );
 	}
 
 	public function backToSelectionButton( string $selectionUrl ): string {
-		return Html::rawElement(
-			'div',
-			[ 'class' => 'elnsmwadapterui-back-selection' ],
-			Html::element( 'a', [
-				'href' => $selectionUrl,
-				'class' => 'mw-ui-button'
-			], $this->messages->msg( 'elnsmwadapterui-back-to-selection' )->text() )
-		);
+		return $this->button( $selectionUrl, 'elnsmwadapterui-back-to-selection' );
+	}
+
+	private function status( string $key, string $value ): string {
+		return $this->messages->msg( 'elnsmwadapterui-status-' . $key, $value )->escaped();
 	}
 
 	/**
-	 * @param array<int, array{type: string, message: string}> $messages Already localized messages
+	 * @param string $url
+	 * @param string $labelKey
+	 * @param string[] $flags OOUI button flags
 	 */
-	public function messageBoxes( array $messages ): string {
-		$html = '';
-		foreach ( $messages as $message ) {
-			$cssClass = $this->getMessageCssClass( $message['type'] );
-			$html .= Html::element( 'div', [
-				'class' => "mw-message-box mw-message-box-{$cssClass}"
-			], $message['message'] );
-		}
-		return $html;
-	}
-
-	/**
-	 * Build the template data for a dynamic form field based on field metadata
-	 * @param array{name: string, label: string, type: string, required?: bool, options?: string[]} $field
-	 * @return array<string, mixed>
-	 */
-	private function getDynamicFieldData( array $field ): array {
-		return [
-			'label' => $field['label'],
-			'name' => 'field_' . $field['name'],
-			'required' => !empty( $field['required'] ),
-			'isSelect' => $field['type'] === 'select',
-			'options' => array_values( (array)( $field['options'] ?? [] ) ),
-		];
+	private function button( string $url, string $labelKey, array $flags = [] ): string {
+		return (string)new ButtonWidget( [
+			'href' => $url,
+			'label' => $this->messages->msg( $labelKey )->text(),
+			'flags' => $flags,
+		] );
 	}
 
 	private function getMessageCssClass( string $type ): string {

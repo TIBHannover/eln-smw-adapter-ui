@@ -4,6 +4,7 @@ namespace ELNSMWAdapterUI\Tests;
 
 use ELNSMWAdapterUI\AdapterPageRenderer;
 use MediaWikiIntegrationTestCase;
+use OutputPage;
 
 /**
  * @covers \ELNSMWAdapterUI\AdapterPageRenderer
@@ -11,6 +12,8 @@ use MediaWikiIntegrationTestCase;
 class AdapterPageRendererTest extends MediaWikiIntegrationTestCase {
 
 	private function newRenderer(): AdapterPageRenderer {
+		// Outside of a web request nothing else sets the OOUI theme the buttons and widgets need
+		OutputPage::setupOOUI();
 		$context = new \RequestContext();
 		$context->setLanguage( 'qqx' );
 		return new AdapterPageRenderer( $context );
@@ -19,74 +22,40 @@ class AdapterPageRendererTest extends MediaWikiIntegrationTestCase {
 	public function testErrorBoxEscapesText() {
 		$html = $this->newRenderer()->errorBox( '<img src=x onerror=alert()>' );
 
-		$this->assertStringContainsString( '&lt;img src=x onerror=alert()>', $html );
+		$this->assertStringContainsString( '&lt;img src=x onerror=alert()&gt;', $html );
 		$this->assertStringNotContainsString( '<img', $html );
-		$this->assertStringContainsString( 'class="errorbox"', $html );
-	}
-
-	public function testMessageBoxesMapTypeToCssClassAndEscapeText() {
-		$html = $this->newRenderer()->messageBoxes( [
-			[ 'type' => 'error', 'message' => '<b>bad</b>' ],
-			[ 'type' => 'warning', 'message' => 'careful' ],
-			[ 'type' => 'other', 'message' => 'fyi' ],
-		] );
-
-		$this->assertStringContainsString( 'mw-message-box-error', $html );
-		$this->assertStringContainsString( 'mw-message-box-warning', $html );
-		$this->assertStringContainsString( 'mw-message-box-notice', $html );
-		$this->assertStringContainsString( '&lt;b>bad&lt;/b>', $html );
-		$this->assertStringNotContainsString( '<b>', $html );
-	}
-
-	public function testMessageBoxesRenderNothingWithoutMessages() {
-		$this->assertSame( '', $this->newRenderer()->messageBoxes( [] ) );
 	}
 
 	public function testBackToSelectionButtonLinksToGivenUrl() {
 		$html = $this->newRenderer()->backToSelectionButton( '/wiki/Special:ELNSMWAdapterUI' );
 
-		$this->assertStringContainsString( 'href="/wiki/Special:ELNSMWAdapterUI"', $html );
+		$this->assertStringContainsString( "href='/wiki/Special:ELNSMWAdapterUI'", $html );
 		$this->assertStringContainsString( '(elnsmwadapterui-back-to-selection)', $html );
 	}
 
-	public function testSelectionFormShowsOfflineStateWithoutStatus() {
-		$html = $this->newRenderer()->selectionForm( null, '/action' );
+	public function testStatusBoxShowsOfflineStateWithoutStatus() {
+		$html = $this->newRenderer()->statusBox( null );
 
-		$this->assertStringContainsString( 'Service unavailable or not responding', $html );
-		$this->assertStringNotContainsString( 'value="url"', $html );
+		$this->assertStringContainsString( '(elnsmwadapterui-status-disconnected)', $html );
 	}
 
-	public function testSelectionFormListsUrlAndUploadPlugins() {
-		$html = $this->newRenderer()->selectionForm( [
+	public function testStatusBoxShowsVersionConnectionAndPlugins() {
+		$html = $this->newRenderer()->statusBox( [
 			'version' => '1.2.3',
-			'plugins' => [
-				'eLabFTW' => [ 'type' => 'url' ],
-				'excel-upload' => [ 'type' => 'upload' ],
-			],
-		], '/action' );
-
-		$this->assertStringContainsString( 'value="url" selected', $html );
-		$this->assertStringContainsString( 'Upload file (excel-upload)', $html );
-		$this->assertStringContainsString( 'action="/action"', $html );
-	}
-
-	public function testUrlFormKeepsEnteredUrlAndToken() {
-		$html = $this->newRenderer()->urlForm( '/action', 'tok+\\', 'https://elab.example/?id=1' );
-
-		$this->assertStringContainsString( 'name="eln-url"', $html );
-		$this->assertStringContainsString( 'value="https://elab.example/?id=1"', $html );
-		$this->assertStringContainsString( 'tok+\\', $html );
-	}
-
-	public function testUploadFormRendersDynamicFields() {
-		$html = $this->newRenderer()->uploadForm( 'excel-local', '/action', 'tok', [
-			[ 'name' => 'project', 'label' => 'Project', 'type' => 'text', 'required' => true ],
-			[ 'name' => 'category', 'label' => 'Category', 'type' => 'select', 'options' => [ 'A', 'B' ] ],
+			'smw_connection' => 'ok',
+			'enabled_plugins' => [ 'eLabFTW', 'excel-upload' ],
 		] );
 
-		$this->assertStringContainsString( 'name="upload-file"', $html );
-		$this->assertStringContainsString( 'name="field_project"', $html );
-		$this->assertStringContainsString( '<option value="B">B</option>', $html );
+		$this->assertStringContainsString( '(elnsmwadapterui-status-connected: 1.2.3)', $html );
+		$this->assertStringContainsString( '(elnsmwadapterui-status-smw-connection: ok)', $html );
+		$this->assertStringContainsString( '(elnsmwadapterui-status-plugins: eLabFTW, excel-upload)', $html );
+	}
+
+	public function testProcessingShowsProgressBarAndStatusText() {
+		$html = $this->newRenderer()->processing();
+
+		$this->assertStringContainsString( 'oo-ui-progressBarWidget', $html );
+		$this->assertStringContainsString( '(elnsmwadapterui-processing-status)', $html );
 	}
 
 	public function testResultsListsOnlyProtocolPagesAndEscapesLogText() {
@@ -101,6 +70,6 @@ class AdapterPageRendererTest extends MediaWikiIntegrationTestCase {
 		$this->assertStringNotContainsString( 'wiki.example/Other', $html );
 		$this->assertStringContainsString( '&lt;script&gt;x&lt;/script&gt;', $html );
 		$this->assertStringNotContainsString( '<script>', $html );
-		$this->assertStringContainsString( 'href="/back"', $html );
+		$this->assertStringContainsString( "href='/back'", $html );
 	}
 }

@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Build the method selection, URL and file upload forms with `HTMLForm` (OOUI) instead of custom Mustache templates and CSS; drag-and-drop file selection now comes from the OOUI file widget, the forms get the standard framed fieldset with a legend via `setWrapperLegendMsg()`
+- Show the service status as a standard message box and the processing state with an OOUI progress bar
+- Form errors are now reported through `HTMLForm` and name the actual cause (e.g. unsupported host) instead of a generic failure message
+
+### Fixed
+- Use i18n messages instead of hardcoded English strings on the special page, the results/processing views and in the client-side polling script
+- Avoid the MediaWiki 1.41 deprecation for passing a `Message` to `OutputPage::setPageTitle()`
+
+### Removed
+- Custom form, upload and spinner styles and the `ext.elnsmwadapterui.fileupload` module
+- Unused i18n messages of the former card layout and form legends
+
 ## [2.0.0] - 2026-09-29
 
 Makes the extension usable on wikis other than the SFB 1368 wiki. Existing installations must now set the values below explicitly.
