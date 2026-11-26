@@ -7,9 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-11-26
+
+Adds a dry run that shows what an import would create without changing the wiki.
+
 ### Added
-- Dry run: a toggle on the method selection page runs the import without writing to the wiki. The following pages show a notice, and the results list the protocols that would be created. The toggle is only offered if the adapter service reports the `dry_run` feature (adapter >= 1.1.0)
-- Show the version of the deployed adapter plugins in the service status, if the service reports it
+- Dry run: a toggle on the method selection page runs the import without writing to the wiki. The following pages show a notice, and the results list the protocols that would be created. The toggle is only offered if the adapter service reports the `dry_run` feature (adapter >= 1.1.0) [`2d2326b`](https://github.com/TIBHannover/eln-smw-adapter-ui/commit/2d2326b)
+- Show the version of the deployed adapter plugins in the service status, if the service reports it [`2d2326b`](https://github.com/TIBHannover/eln-smw-adapter-ui/commit/2d2326b)
 
 ## [2.0.1] - 2026-09-30
 
