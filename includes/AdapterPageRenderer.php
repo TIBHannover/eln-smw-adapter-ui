@@ -32,6 +32,9 @@ class AdapterPageRenderer {
 		}
 
 		$lines = [ $this->status( 'connected', (string)( $status['version'] ?? '?' ) ) ];
+		if ( !empty( $status['plugins_version'] ) ) {
+			$lines[] = $this->status( 'plugins-version', (string)$status['plugins_version'] );
+		}
 		if ( isset( $status['smw_connection'] ) ) {
 			$lines[] = $this->status( 'smw-connection', (string)$status['smw_connection'] );
 		}
@@ -49,12 +52,21 @@ class AdapterPageRenderer {
 		] );
 	}
 
+	public function dryRunNotice(): string {
+		return Html::warningBox( $this->messages->msg( 'elnsmwadapterui-dry-run-notice' )->parse() );
+	}
+
 	public function results( stdClass $result, string $wikiUrl, string $backUrl ): string {
+		// Taken from the service response, so the notice only shows if the service really wrote nothing
+		$dryRun = ( $result->dry_run ?? false ) === true;
+
 		$protocols = [];
 		foreach ( $result->smw_pages ?? [] as $pageId => $pageData ) {
 			if ( strpos( (string)$pageId, 'P' ) === 0 ) {
 				$protocols[] = [
 					'url' => $wikiUrl . '/' . urlencode( (string)$pageId ),
+					// No links in a dry run: the pages do not exist
+					'hasLink' => !$dryRun,
 					'pageId' => (string)$pageId,
 				];
 			}
@@ -70,11 +82,19 @@ class AdapterPageRenderer {
 		}
 
 		return $this->renderTemplate( 'results', [
-			'protocolsTitle' => $this->messages->msg( 'elnsmwadapterui-results-protocols' )->text(),
+			'dryRunNotice' => $dryRun ? $this->dryRunNotice() : '',
+			'protocolsTitle' => $this->messages->msg(
+				$dryRun ? 'elnsmwadapterui-results-protocols-dry-run' : 'elnsmwadapterui-results-protocols'
+			)->text(),
 			'hasProtocols' => $protocols !== [],
 			'protocols' => $protocols,
-			'summary' => $this->messages->msg( 'elnsmwadapterui-protocols-count', count( $protocols ) )->text(),
-			'noProtocolsText' => $this->messages->msg( 'elnsmwadapterui-warning-no-protocols' )->text(),
+			'summary' => $this->messages->msg(
+				$dryRun ? 'elnsmwadapterui-protocols-count-dry-run' : 'elnsmwadapterui-protocols-count',
+				count( $protocols )
+			)->text(),
+			'noProtocolsText' => $this->messages->msg(
+				$dryRun ? 'elnsmwadapterui-warning-no-protocols-dry-run' : 'elnsmwadapterui-warning-no-protocols'
+			)->text(),
 			'logTitle' => $this->messages->msg( 'elnsmwadapterui-results-log' )->text(),
 			'hasLogMessages' => $logMessages !== [],
 			'logMessages' => $logMessages,

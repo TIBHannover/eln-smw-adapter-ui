@@ -1,9 +1,10 @@
 <div class="elnsmwadapterui-results">
+	{{{dryRunNotice}}}
 	<h2>{{protocolsTitle}}</h2>
 	{{#hasProtocols}}
 	<ul>
 		{{#protocols}}
-		<li><a href="{{url}}" target="_blank" rel="noopener noreferrer">{{pageId}}</a></li>
+		<li>{{#hasLink}}<a href="{{url}}" target="_blank" rel="noopener noreferrer">{{pageId}}</a>{{/hasLink}}{{^hasLink}}{{pageId}}{{/hasLink}}</li>
 		{{/protocols}}
 	</ul>
 	<p>{{summary}}</p>
