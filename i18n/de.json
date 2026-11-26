@@ -56,5 +56,12 @@
 	"action-elnsmwadapterui-use": "Protokolle mit dem ELN SMW Adapter zu importieren",
 	"elnsmwadapterui-form-legend": "Protokolle aus ELN importieren",
 	"elnsmwadapterui-form-select-legend": "Import-Methode auswählen",
-	"elnsmwadapterui-form-upload-legend": "Datei hochladen"
+	"elnsmwadapterui-form-upload-legend": "Datei hochladen",
+	"elnsmwadapterui-form-dry-run-label": "Testlauf",
+	"elnsmwadapterui-form-dry-run-help": "Zeigt, welche Seiten der Import anlegen würde, ohne das Wiki zu ändern.",
+	"elnsmwadapterui-dry-run-notice": "'''Testlauf:''' Es wird nichts ins Wiki geschrieben. Die Seitennamen sind eine Vorschau.",
+	"elnsmwadapterui-results-protocols-dry-run": "Protokolle, die importiert würden",
+	"elnsmwadapterui-protocols-count-dry-run": "{{PLURAL:$1|$1 Protokoll würde|$1 Protokolle würden}} importiert.",
+	"elnsmwadapterui-warning-no-protocols-dry-run": "Der Import würde keine Protokolle anlegen.",
+	"elnsmwadapterui-status-plugins-version": "Plugin-Version: $1"
 }

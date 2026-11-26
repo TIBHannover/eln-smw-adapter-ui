@@ -24,6 +24,9 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 
 	private const DYNAMIC_FIELD_PREFIX = 'field_';
 
+	/** URL parameter that carries the dry run choice from the selection form to the result */
+	private const DRY_RUN_PARAM = 'dryrun';
+
 	/**
 	 * No native type hint: on MW 1.39 (the minimum version required by extension.json)
 	 * Config is in the global namespace; MediaWiki\Config\Config (used on MW 1.43) is a
@@ -127,20 +130,31 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 			return;
 		}
 
-		$this->newForm( [
+		$descriptor = [
 			'eln-type' => [
 				'type' => 'select',
 				'label-message' => 'elnsmwadapterui-form-eln-type-label',
 				'options' => $options,
 				'default' => reset( $options ),
 			],
-		], 'elnsmwadapterui-form-select-legend', 'elnsmwadapterui-form-eln-type-help' )
+		];
+		// Offered only if the service reports support; an older service would ignore the flag and import for real
+		if ( in_array( 'dry_run', (array)( $status['features'] ?? [] ), true ) ) {
+			$descriptor['dry-run'] = [
+				'type' => 'toggle',
+				'label-message' => 'elnsmwadapterui-form-dry-run-label',
+				'help-message' => 'elnsmwadapterui-form-dry-run-help',
+				'default' => false,
+			];
+		}
+
+		$this->newForm( $descriptor, 'elnsmwadapterui-form-select-legend', 'elnsmwadapterui-form-eln-type-help' )
 			->setMethod( 'get' )
 			->setFormIdentifier( 'selection' )
 			->setSubmitTextMsg( 'elnsmwadapterui-form-continue' )
 			->setSubmitCallback( function ( array $data ) {
 				$this->getOutput()->redirect(
-					$this->getPageTitle()->getLocalURL( [ 'method' => $data['eln-type'] ] )
+					$this->getLocalUrl( [ 'method' => $data['eln-type'] ], !empty( $data['dry-run'] ) )
 				);
 				return true;
 			} )
@@ -176,6 +190,8 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 	}
 
 	private function displayMethodForm( OutputPage $out, string $method ): void {
+		$this->addDryRunNotice( $out );
+
 		if ( $method === 'url' ) {
 			$this->displayUrlForm( $out );
 			return;
@@ -206,7 +222,7 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 				'required' => true,
 			],
 		], 'elnsmwadapterui-form-legend', 'elnsmwadapterui-form-url-help' )
-			->setAction( $this->getPageTitle()->getLocalURL( [ 'method' => 'url' ] ) )
+			->setAction( $this->getLocalUrl( [ 'method' => 'url' ] ) )
 			->setSubmitTextMsg( 'elnsmwadapterui-form-submit' )
 			->setSubmitCallback( [ $this, 'processForm' ] )
 			->show();
@@ -232,7 +248,7 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 		}
 
 		$this->newForm( $descriptor, 'elnsmwadapterui-form-upload-legend', 'elnsmwadapterui-form-file-help' )
-			->setAction( $this->getPageTitle()->getLocalURL( [ 'method' => $method ] ) )
+			->setAction( $this->getLocalUrl( [ 'method' => $method ] ) )
 			->setSubmitTextMsg( 'elnsmwadapterui-form-upload' )
 			->setSubmitCallback( fn ( array $data ) => $this->processFileUploadForm( $data + [ 'method' => $method ] ) )
 			->show();
@@ -269,6 +285,31 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 		$out->addHTML( Html::rawElement( 'p', [], $this->getRenderer()->backToSelectionButton(
 			$this->getPageTitle()->getLocalURL()
 		) ) );
+	}
+
+	/**
+	 * Whether the user switched on the dry run on the selection form
+	 */
+	private function isDryRun(): bool {
+		return $this->getRequest()->getBool( self::DRY_RUN_PARAM );
+	}
+
+	/**
+	 * URL of this special page that keeps the dry run choice
+	 * @param array<string, string> $query
+	 * @param bool|null $dryRun Null: keep the choice of the current request
+	 */
+	private function getLocalUrl( array $query, ?bool $dryRun = null ): string {
+		if ( $dryRun ?? $this->isDryRun() ) {
+			$query[self::DRY_RUN_PARAM] = '1';
+		}
+		return $this->getPageTitle()->getLocalURL( $query );
+	}
+
+	private function addDryRunNotice( OutputPage $out ): void {
+		if ( $this->isDryRun() ) {
+			$out->addHTML( $this->getRenderer()->dryRunNotice() );
+		}
 	}
 
 	/**
@@ -409,6 +450,7 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 		}
 
 		$out->setPageTitle( $this->msg( 'elnsmwadapterui-processing-title' )->text() );
+		$this->addDryRunNotice( $out );
 
 		// Use a public job status URL that the browser can access (e.g. via a reverse proxy)
 		$server = rtrim( (string)$this->config->get( 'Server' ), '/' );
@@ -543,6 +585,10 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 			$userName = $currentUser->getName();
 		}
 
+		if ( $this->isDryRun() ) {
+			$additionalData['dry_run'] = true;
+		}
+
 		try {
 			return Status::newGood(
 				$this->adapterServiceClient->submitJob( $eln, $id, $userName, $additionalData )
@@ -563,7 +609,7 @@ class SpecialELNSMWAdapterUI extends SpecialPage {
 		}
 
 		$this->getOutput()->redirect(
-			$this->getPageTitle()->getLocalURL( [ 'action' => 'processing', 'job_id' => $jobStatus->getValue() ] )
+			$this->getLocalUrl( [ 'action' => 'processing', 'job_id' => (string)$jobStatus->getValue() ] )
 		);
 		return true;
 	}
